@@ -13,7 +13,6 @@ type Props = {
 export default function RiskProjectTable({ projects }: Props) {
   const router = useRouter();
   
-  // --- STATE UNTUK FILTER & SEARCH ---
   const [searchTerm, setSearchTerm] = useState('');
   const [divisionFilter, setDivisionFilter] = useState('All');
   const [sortConfig, setSortConfig] = useState<{ key: 'cpi' | 'spi'; direction: 'asc' | 'desc' } | null>({
@@ -21,16 +20,11 @@ export default function RiskProjectTable({ projects }: Props) {
     direction: 'asc' 
   });
 
-  // --- LOGIKA FILTERING & SORTING ---
   const filteredRiskProjects = useMemo(() => {
     return projects
-      // 1. Hanya tampilkan yang berisiko (Warning/Critical)
       .filter(p => p.status !== 'good')
-      // 2. Filter Divisi (Infrastructure / Building)
       .filter(p => divisionFilter === 'All' || p.division === divisionFilter)
-      // 3. Search Term (Nama Project)
       .filter(p => p.project_name.toLowerCase().includes(searchTerm.toLowerCase()))
-      // 4. Sorting
       .sort((a, b) => {
         if (!sortConfig) return 0;
         const valA = parseFloat(a[sortConfig.key]);
@@ -49,14 +43,12 @@ export default function RiskProjectTable({ projects }: Props) {
   return (
     <div className="flex flex-col gap-6 bg-white" style={{ width: '1203px', padding: '24px 32px' }}>
       
-      {/* --- HEADER TABLE SECTION --- */}
       <div className="flex items-center justify-between" style={{ width: '1139px', height: '38px' }}>
         <h2 className="text-[22px] font-bold text-[#1B1C1F] tracking-tight">
           Risk Project List
         </h2>
         
         <div className="flex items-center gap-3 h-full">
-          {/* Search Bar */}
           <div className="relative h-full">
             <input 
               type="text" 
@@ -68,7 +60,6 @@ export default function RiskProjectTable({ projects }: Props) {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           </div>
 
-          {/* Division Filter Aktif */}
           <div className="relative h-full">
             <select 
               value={divisionFilter}
@@ -91,7 +82,6 @@ export default function RiskProjectTable({ projects }: Props) {
         </div>
       </div>
 
-      {/* --- TABLE CONTENT --- */}
       <div 
         className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm" 
         style={{ width: '1139px', minHeight: '267px' }}

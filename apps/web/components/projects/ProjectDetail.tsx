@@ -50,15 +50,13 @@ export default function ProjectDetail({ id }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Section 1: Performance Summary */}
       <PerformanceSummary project={project} />
 
-      {/* Section 2: Visual Indicator (Fixing Sizing) */}
       <div 
         className="bg-white rounded-2xl  flex flex-col"
         style={{
           width: '1203px',
-          height: '485px',
+          height: '390px',
           paddingTop: '18px',
           paddingRight: '32px',
           paddingBottom: '18px',
@@ -70,7 +68,6 @@ export default function ProjectDetail({ id }: Props) {
           Visual Indicator
         </h2>
         
-        {/* Kontainer Flex untuk Chart */}
         <div 
           className="flex flex-row flex-1" 
           style={{ gap: '18px' }} // Gap antar kartu sesuai spesifikasi
@@ -88,8 +85,7 @@ export default function ProjectDetail({ id }: Props) {
         </div>
       </div>
 
-      {/* Section 3: Insight Box */}
-      <InsightBox project={project} allProjects={allProjects} />
+      <InsightBox project={project} />
     </div>
   );
 }

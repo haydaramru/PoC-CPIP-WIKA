@@ -8,7 +8,6 @@ type Props = {
   project: Project;
 };
 
-// ── Metric Card (Desain Sesuai Gambar 09.02.22) ───────────────────────────
 function MetricCard({ 
   label, value, sub, isUp, trendLabel, icon: Icon 
 }: { 
@@ -16,7 +15,6 @@ function MetricCard({
 }) {
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col justify-between h-full hover:shadow-md transition-shadow">
-      {/* Top: Icon & Label */}
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-[#1D4ED8] rounded flex items-center justify-center shadow-sm shrink-0">
@@ -29,14 +27,12 @@ function MetricCard({
         <Info size={15} className="text-[#1D4ED8] cursor-help opacity-70 hover:opacity-100 transition-opacity" />
       </div>
 
-      {/* Middle: Big Value */}
       <div className="mt-1">
         <h3 className="text-[32px] font-bold text-[#1B1C1F] leading-none tracking-tighter">
           {value}
         </h3>
       </div>
 
-      {/* Bottom: Trend Indicator & Original Description */}
       <div className="mt-2 flex flex-col gap-0.5">
         <div className={`flex items-center gap-1 text-[11px] font-bold ${isUp ? 'text-green-600' : 'text-red-600'}`}>
           {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
@@ -51,9 +47,7 @@ function MetricCard({
   );
 }
 
-// ── Main Component: Performance History (1203 x 228) ──────────────────────
 export default function PerformanceHistory({ project }: Props) {
-  // Logic Calculations (Data Props)
   const cpi = parseFloat(project.cpi);
   const spi = parseFloat(project.spi);
   const plannedCost = parseFloat(project.planned_cost);
@@ -64,7 +58,6 @@ export default function PerformanceHistory({ project }: Props) {
 
   return (
     <div className="w-full h-57 bg-white flex flex-col overflow-hidden px-8 py-4 gap-4.5">
-      {/* Header Section: Title & Metadata */}
       <div className="flex justify-between items-center">
         <h1 className="text-[20px] font-bold text-[#1B1C1F] tracking-tight">
           {project.project_name}
@@ -79,10 +72,13 @@ export default function PerformanceHistory({ project }: Props) {
             <span>Contract Value:</span>
             <span className="text-[#1B1C1F] font-bold">{formatCurrency(project.contract_value)}</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <span>Year:</span>
+            <span className="text-[#1B1C1F] font-bold ml-1">{project.project_year}</span>
+          </div>
         </div>
       </div>
 
-      {/* Cards Section: Metric Grid */}
       <div className="grid grid-cols-4 gap-4 grow">
         <MetricCard
           label="CPI"

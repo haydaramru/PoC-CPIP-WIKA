@@ -14,17 +14,20 @@ class UploadExcelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Max 5MB, hanya .xlsx dan .xls
-            'file' => 'required|file|mimes:xlsx,xls|max:5120',
+            'files'   => 'required|array|min:1|max:10',
+            'files.*' => 'required|file|mimes:xlsx,xls|max:5120',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'file.required' => 'File Excel wajib diupload.',
-            'file.mimes'    => 'Format file harus .xlsx atau .xls.',
-            'file.max'      => 'Ukuran file maksimal 5MB.',
+            'files.required'   => 'Minimal satu file Excel harus diupload.',
+            'files.array'      => 'Format upload tidak valid.',
+            'files.max'        => 'Maksimal 10 file sekaligus.',
+            'files.*.required' => 'File tidak boleh kosong.',
+            'files.*.mimes'    => 'Format file harus .xlsx atau .xls.',
+            'files.*.max'      => 'Ukuran file maksimal 5MB per file.',
         ];
     }
 }

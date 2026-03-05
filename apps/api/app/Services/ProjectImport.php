@@ -9,9 +9,6 @@ use Illuminate\Validation\ValidationException;
 
 class ProjectImport
 {
-    /**
-     * Kolom wajib yang harus ada di header Excel (case-insensitive)
-     */
     private const REQUIRED_COLUMNS = [
         'project_code',
         'project_name',
@@ -19,6 +16,7 @@ class ProjectImport
         'contract_value',
         'planned_cost',
         'actual_cost',
+        'project_year',
         'planned_duration',
         'actual_duration',
     ];
@@ -27,10 +25,6 @@ class ProjectImport
     private int   $imported = 0;
     private int   $skipped  = 0;
 
-    /**
-     * Parse file Excel dan import ke database.
-     * Return summary hasil import.
-     */
     public function import(string $filePath): array
     {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
@@ -41,23 +35,18 @@ class ProjectImport
             throw new \RuntimeException('File Excel kosong.');
         }
 
-        // Baris pertama = header
         $headers = $this->normalizeHeaders($rows[0]);
         $this->validateHeaders($headers);
 
-        // Proses baris data (mulai dari index 1)
         $dataRows = array_slice($rows, 1);
 
         foreach ($dataRows as $rowIndex => $row) {
             $lineNumber = $rowIndex + 2; // +2 karena header di baris 1
 
-            // Skip baris kosong
             if ($this->isEmptyRow($row)) continue;
 
-            // Map kolom ke key
             $data = array_combine($headers, $row);
 
-            // Validasi per baris
             $validator = $this->makeValidator($data, $lineNumber);
 
             if ($validator->fails()) {
@@ -68,8 +57,6 @@ class ProjectImport
                 continue;
             }
 
-            // Upsert: jika project_code sudah ada → update, belum ada → insert
-            // KPI dihitung otomatis oleh Model::saving()
             Project::updateOrCreate(
                 ['project_code' => trim($data['project_code'])],
                 [
@@ -95,21 +82,13 @@ class ProjectImport
         ];
     }
 
-    // =========================================================================
-    // Private helpers
-    // =========================================================================
-
-    /**
-     * Lowercase & trim semua header dari Excel
-     */
+    
     private function normalizeHeaders(array $rawHeaders): array
     {
         return array_map(fn($h) => strtolower(trim((string) $h)), $rawHeaders);
     }
 
-    /**
-     * Pastikan semua kolom wajib ada di header
-     */
+   
     private function validateHeaders(array $headers): void
     {
         $missing = array_diff(self::REQUIRED_COLUMNS, $headers);
@@ -122,17 +101,12 @@ class ProjectImport
         }
     }
 
-    /**
-     * Cek apakah baris benar-benar kosong (semua cell null/empty)
-     */
     private function isEmptyRow(array $row): bool
     {
         return empty(array_filter($row, fn($cell) => $cell !== null && $cell !== ''));
     }
 
-    /**
-     * Validasi data per baris sebelum insert
-     */
+   
     private function makeValidator(array $data, int $lineNumber): \Illuminate\Validation\Validator
     {
         return Validator::make($data, [

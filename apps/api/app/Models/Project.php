@@ -21,9 +21,11 @@ class Project extends Model
         'planned_duration',
         'actual_duration',
         'progress_pct',
+        'project_year',
         'cpi',
         'spi',
         'status',
+        'ingestion_file_id',
     ];
 
     protected $casts = [
@@ -31,25 +33,26 @@ class Project extends Model
         'planned_cost'    => 'decimal:2',
         'actual_cost'     => 'decimal:2',
         'progress_pct'    => 'decimal:2',
-        'cpi'             => 'decimal:4',
-        'spi'             => 'decimal:4',
+        'project_year' => 'integer',
+        'cpi'             => 'decimal:1',
+        'spi'             => 'decimal:1',
         'planned_duration'=> 'integer',
         'actual_duration' => 'integer',
     ];
 
-    /**
-     * Boot: hitung KPI otomatis saat creating & updating
-     */
+    
     protected static function booted(): void
     {
-        $calculator = new KpiCalculatorService();
+        static::saving(function (Project $project) {
+            if (empty($project->project_year)) {
+                $project->project_year = (int) now()->format('Y');
+            }
 
-        static::saving(function (Project $project) use ($calculator) {
-            $kpi = $calculator->calculate(
+            $kpi = (new KpiCalculatorService())->calculate(
                 (float) $project->planned_cost,
                 (float) $project->actual_cost,
-                (int) $project->planned_duration,
-                (int) $project->actual_duration,
+                (int)   $project->planned_duration,
+                (int)   $project->actual_duration,
             );
 
             $project->cpi    = $kpi['cpi'];
@@ -58,10 +61,7 @@ class Project extends Model
         });
     }
 
-    // =========================================================================
-    // Scopes untuk filtering & sorting
-    // =========================================================================
-
+    
     public function scopeByDivision($query, ?string $division)
     {
         if ($division) {
@@ -84,11 +84,16 @@ class Project extends Model
         }
         return $query;
     }
+    
+    public function scopeByYear($query, ?int $year)
+    {
+        if ($year) {
+            return $query->where('project_year', $year);
+        }
+        return $query;
+    }
 
-    // =========================================================================
-    // Helper attributes
-    // =========================================================================
-
+   
     public function getIsOverbudgetAttribute(): bool
     {
         return $this->cpi < 1;

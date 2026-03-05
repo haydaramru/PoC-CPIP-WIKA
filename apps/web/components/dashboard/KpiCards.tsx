@@ -21,7 +21,6 @@ export default function KpiCards({ data, filters, onChange }: Props) {
 
   return (
     <div className="flex flex-col bg-white" style={{ width: '1203px', padding: '18px 32px' }}>
-      {/* ── OVERVIEW & FILTERS ────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6" style={{ width: '1139px' }}>
         <h2 className="text-[18px] font-bold text-[#1B1C1F]">Overview</h2>
         
@@ -31,11 +30,10 @@ export default function KpiCards({ data, filters, onChange }: Props) {
             style={{ 
               width: '292px', 
               height: '27px', 
-              gap: '16px', // Jarak antar dropdown tetap 16px
+              gap: '16px', 
               opacity: 1 
             }}
           >
-            {/* Division: Lebih pendek */}
             <div className="w-21.25 h-full">
               <FilterSelect 
                 value={filters.division} 
@@ -44,7 +42,6 @@ export default function KpiCards({ data, filters, onChange }: Props) {
               />
             </div>
 
-            {/* Contract Value: Lebih lebar agar tidak terpotong */}
             <div className="w-30 h-full">
               <FilterSelect 
                 value={filters.contractRange} 
@@ -53,7 +50,6 @@ export default function KpiCards({ data, filters, onChange }: Props) {
               />
             </div>
 
-            {/* Year: Paling pendek */}
             <div className="w-17.75 h-full">
               <FilterSelect 
                 value={filters.year} 
@@ -63,7 +59,6 @@ export default function KpiCards({ data, filters, onChange }: Props) {
             </div>
           </div>
 
-          {/* Reset Button (Di luar kontainer 292px agar tidak mengganggu layout dropdown) */}
           {(filters.division || filters.contractRange || filters.year) && (
             <button 
               onClick={() => onChange({ division: '', contractRange: '', year: '' })}
@@ -75,7 +70,6 @@ export default function KpiCards({ data, filters, onChange }: Props) {
         </div>
       </div>
 
-      {/* ── KPI CARDS ROW ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between" style={{ width: '1139px' }}>
         <KpiCard label="Total Projects" value={data.total_projects} trendValue={3} icon={LayoutPanelLeft} />
         <KpiCard label="Average CPI" value={formatKpi(data.avg_cpi)} trendValue={-0.05} icon={Wallet} />
@@ -86,7 +80,6 @@ export default function KpiCards({ data, filters, onChange }: Props) {
   );
 }
 
-// Sub-komponen Dropdown bergaya minimalis
 function FilterSelect({ value, options, onChange }: { value: string, options: any[], onChange: (v: string) => void }) {
   return (
     <div className="relative flex-1 h-full">
@@ -109,7 +102,6 @@ function FilterSelect({ value, options, onChange }: { value: string, options: an
   );
 }
 
-// Sub-komponen Kartu sesuai Gambar
 function KpiCard({ label, value, trendValue, icon: Icon, isPositiveGood = true }: any) {
   const isPositive = trendValue >= 0;
   const isGoodTrend = isPositiveGood ? isPositive : !isPositive;
@@ -119,7 +111,6 @@ function KpiCard({ label, value, trendValue, icon: Icon, isPositiveGood = true }
   return (
     <div className="flex flex-col bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-all" style={{ width: '274px', height: '147px' }}>
       <div className="flex items-start justify-between mb-2">
-        {/* Container Icon & Label (238x26px) */}
         <div 
           className="flex items-center"
           style={{
@@ -130,18 +121,15 @@ function KpiCard({ label, value, trendValue, icon: Icon, isPositiveGood = true }
           }}
         >
           <div className="flex items-center gap-3">
-            {/* Icon Box yang disesuaikan dengan tinggi 26px */}
             <div className="flex items-center justify-center bg-primary-blue rounded-md w-6.5 h-6.5 shrink-0">
               <Icon size={14} className="text-white" />
             </div>
             
-            {/* Label Teks */}
             <span className="text-[13px] font-semibold text-[#1B1C1F] truncate">
               {label}
             </span>
           </div>
 
-          {/* Info Icon diposisikan di ujung kanan container 238px */}
           <Info size={14} className="text-[#1B1C1F] cursor-help shrink-0" />
         </div>
       </div>

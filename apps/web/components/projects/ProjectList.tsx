@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -10,25 +11,31 @@ type SortField = 'cpi' | 'spi' | 'contract_value' | 'project_name';
 type SortDir   = 'asc' | 'desc';
 
 export default function ProjectList() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState('');
+  const [projects,       setProjects]       = useState<Project[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState('');
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
-  // Filter & sort state
-  const [search,   setSearch]   = useState('');
-  const [division, setDivision] = useState('');
-  const [sortBy,   setSortBy]   = useState<SortField>('cpi');
-  const [sortDir,  setSortDir]  = useState<SortDir>('asc');
+  const [activeYear, setActiveYear] = useState<number | null>(null);
+  const [search,     setSearch]     = useState('');
+  const [division,   setDivision]   = useState('');
+  const [sortBy,     setSortBy]     = useState<SortField>('cpi');
+  const [sortDir,    setSortDir]    = useState<SortDir>('asc');
 
-  // ── Fetch ────────────────────────────────────────────────
   useEffect(() => {
-    projectApi.list()
-      .then(res => setProjects(res.data))
+    setLoading(true);
+
+    const yearParam = division ? undefined : (activeYear ?? undefined);
+
+    projectApi.list({ year: yearParam })
+      .then(res => {
+        setProjects(res.data);
+        setAvailableYears(res.meta.available_years ?? []);
+      })
       .catch(() => setError('Gagal memuat data. Pastikan Laravel server berjalan.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeYear, division]);  // re-fetch saat year atau division berubah
 
-  // ── Sort toggle ──────────────────────────────────────────
   function handleSort(field: SortField) {
     if (sortBy === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -38,7 +45,6 @@ export default function ProjectList() {
     }
   }
 
-  // ── Filter + Sort (client-side) ──────────────────────────
   const displayedProjects = useMemo(() => {
     let result = [...projects];
 
@@ -91,25 +97,24 @@ export default function ProjectList() {
     );
   }
 
-  // ── Main render ──────────────────────────────────────────
   return (
-    <div 
+    <div
       className="flex flex-col bg-white"
-      style={{
-        width: '1203px',
-        height: '903px',
-        padding: '18px 32px',
-        gap: '18px',
-        opacity: 1,
-      }}
+      style={{ width: '1203px', height: '903px', padding: '18px 32px', gap: '18px', opacity: 1 }}
     >
       <ProjectListHeader
         search={search}
         division={division}
         totalShown={displayedProjects.length}
         totalAll={projects.length}
+        availableYears={availableYears}
+        activeYear={division ? null : activeYear}
         onSearchChange={setSearch}
-        onDivisionChange={setDivision}
+        onDivisionChange={(val) => {
+          setDivision(val);
+          if (val) setActiveYear(null);
+        }}
+        onYearChange={setActiveYear}
       />
       <ProjectTable
         projects={displayedProjects}

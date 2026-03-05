@@ -24,7 +24,6 @@ export default function DashboardSummary() {
     year: '',
   });
 
-  // ── Fetch data ─────────────────────────────────────────
   useEffect(() => {
     Promise.all([
       projectApi.summary(),
@@ -38,7 +37,6 @@ export default function DashboardSummary() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Filter projects untuk RiskProjectTable ─────────────
   const filteredProjects = projects.filter(p => {
     if (filters.division && p.division !== filters.division) return false;
     if (filters.contractRange) {
@@ -49,7 +47,6 @@ export default function DashboardSummary() {
     return true;
   });
 
-  // ── Loading ─────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 gap-3 text-gray-400">
@@ -59,7 +56,6 @@ export default function DashboardSummary() {
     );
   }
 
-  // ── Error ───────────────────────────────────────────────
   if (error) {
     return (
       <div className="card border border-red-200 bg-red-50 text-red-700 text-sm p-5">
@@ -68,7 +64,6 @@ export default function DashboardSummary() {
     );
   }
 
-  // ── Empty ───────────────────────────────────────────────
   if (!summary || summary.total_projects === 0) {
     return (
       <div className="card text-center py-16 space-y-3">
@@ -80,7 +75,6 @@ export default function DashboardSummary() {
     );
   }
 
-  // ── Main render ─────────────────────────────────────────
   return (
     <div className="bg-[#F9FAFB] min-h-screen">
       <KpiCards 

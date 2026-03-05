@@ -6,122 +6,107 @@ import { DollarSign, Calendar } from 'lucide-react';
 type Props = {
   label: string;
   value: number;
-  min?: number;
-  max?: number;
   type?: 'cost' | 'schedule';
 };
 
-export default function GaugeChart({
-  label,
-  value,
-  min = 0,
-  max = 1.2,
-  type = 'cost',
-}: Props) {
-  const cx = 150;
-  const cy = 145;
-  const outerRadius = 110;
-  const thickness = 36;
-  const innerRadius = outerRadius - thickness;
+export default function GaugeChart({ label, value, type = 'cost' }: Props) {
+  const MAX = 1.2;
+  const TARGET = 1.0;
+  const clamped = Math.min(Math.max(value, 0), MAX);
+  const fillPct = (clamped / MAX) * 100;
+  const targetPct = (TARGET / MAX) * 100;
 
-  const START_DEG = 180;
-  const ARC_SPAN = 180;
-  const GAP = 3;
-
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const polarToXY = (deg: number, r: number) => ({
-    x: cx + r * Math.cos(toRad(deg)),
-    y: cy - r * Math.sin(toRad(deg)),
-  });
-
-  const describeDonutArc = (startDeg: number, spanDeg: number) => {
-    const endDeg = startDeg - spanDeg;
-    const outerStart = polarToXY(startDeg, outerRadius);
-    const outerEnd = polarToXY(endDeg, outerRadius);
-    const innerStart = polarToXY(startDeg, innerRadius);
-    const innerEnd = polarToXY(endDeg, innerRadius);
-    const largeArcFlag = spanDeg <= 180 ? '0' : '1';
-
-    return `
-      M ${outerStart.x} ${outerStart.y}
-      A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEnd.x} ${outerEnd.y}
-      L ${innerEnd.x} ${innerEnd.y}
-      A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStart.x} ${innerStart.y}
-      Z
-    `;
-  };
-
-  const clamped = Math.min(Math.max(value, min), max);
-  const pct = (clamped - min) / (max - min);
-  const needleDeg = START_DEG - pct * ARC_SPAN;
-
-  const segments = [
-    { start: 0,   end: 0.6, color: '#D32F2F' },
-    { start: 0.6, end: 1.0, color: '#F9A825' },
-    { start: 1.0, end: 1.2, color: '#388E3C' },
-  ];
-
-  const ticks = [0, 0.4, 0.6, 0.8, 1.0, 1.2];
-  const isGood = clamped >= 1.0;
-  const statusColor = isGood ? '#388E3C' : '#D32F2F';
+  const isGood = clamped >= TARGET;
+  const statusColor = isGood ? '#16A34A' : '#DC2626';
   const statusText = type === 'cost'
     ? isGood ? 'Cost Efficient' : 'Over Budget'
     : isGood ? 'Ahead of Schedule' : 'Behind Schedule';
 
+  const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+
   return (
-    <div className="flex-1 h-101 px-15 py-16 border border-gray-200 bg-white rounded-lg flex flex-col items-center justify-between">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', alignSelf: 'flex-start' }}>
-        <div style={{ width: '32px', height: '32px', backgroundColor: '#1D4ED8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {type === 'cost' ? <DollarSign size={16} color="white" /> : <Calendar size={16} color="white" />}
+    <div className="flex-1 bg-white border border-gray-200 rounded-xl px-8 py-6 flex flex-col gap-6">
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 bg-blue-700 rounded-md flex items-center justify-center shrink-0">
+          {type === 'cost'
+            ? <DollarSign size={16} color="white" />
+            : <Calendar size={16} color="white" />}
         </div>
-        <span style={{ fontSize: '14px', fontWeight: 700, color: '#374151' }}>{label}</span>
+        <span className="text-sm font-bold text-gray-700">{label}</span>
       </div>
 
-      <svg viewBox="0 0 300 175" style={{ width: '100%', maxHeight: '180px' }}>
-        {segments.map((seg, i) => {
-          const startPct = (seg.start - min) / (max - min);
-          const endPct = (seg.end - min) / (max - min);
-          const span = (endPct - startPct) * ARC_SPAN;
-          const startAngle = START_DEG - startPct * ARC_SPAN;
-          return (
-            <path key={i} d={describeDonutArc(startAngle - (i > 0 ? GAP / 2 : 0), span - (i < 2 ? GAP / 2 : 0))} fill={seg.color} />
-          );
-        })}
+      <div className="flex flex-col gap-2">
+        <div className="relative h-5">
+          <div
+            className="absolute flex flex-col items-center"
+            style={{ left: `${targetPct}%`, transform: 'translateX(-50%)' }}
+          >
+            <span className="text-xs font-semibold text-gray-400 leading-none">Target</span>
+          </div>
+        </div>
 
-        {ticks.map((val) => {
-          const p = (val - min) / (max - min);
-          const deg = START_DEG - p * ARC_SPAN;
-          const pos = polarToXY(deg, outerRadius + 16);
-          return (
-            <text key={val} x={pos.x} y={pos.y} fontSize="9" fill="#9CA3AF" textAnchor="middle" fontWeight="600" dominantBaseline="middle">
-              {val.toFixed(1)}
-            </text>
-          );
-        })}
+        <div className="relative h-5 rounded-full bg-gray-100 overflow-visible">
+          <div
+            className="absolute top-0 left-0 h-full rounded-full transition-all duration-700 ease-out"
+            style={{
+              width: `${fillPct}%`,
+              backgroundColor: '#1D4ED8',
+            }}
+          />
 
-        <line x1={cx} y1={cy} x2={polarToXY(needleDeg, outerRadius - 6).x} y2={polarToXY(needleDeg, outerRadius - 6).y} stroke="#111827" strokeWidth="3.5" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r="9" fill="#111827" />
-        <circle cx={cx} cy={cy} r="4" fill="white" />
-      </svg>
+          <div
+            className="absolute -top-1.5 -bottom-1.5 flex flex-col items-center"
+            style={{ left: `${targetPct}%`, transform: 'translateX(-50%)' }}
+          >
+            <div
+              style={{
+                width: '2px',
+                height: '100%',
+                backgroundImage: 'repeating-linear-gradient(to bottom, #9CA3AF 0px, #9CA3AF 4px, transparent 4px, transparent 8px)',
+              }}
+            />
+          </div>
+        </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={{ fontSize: '64px', fontWeight: 900, color: statusColor, lineHeight: 1 }}>{clamped.toFixed(2)}</span>
-        <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginTop: '4px' }}>{statusText}</span>
+        <div className="relative h-4">
+          {ticks.map((tick) => {
+            const pct = (tick / MAX) * 100;
+            return (
+              <div
+                key={tick}
+                className="absolute flex flex-col items-center"
+                style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
+              >
+                <span className="text-[10px] text-gray-400 font-medium leading-none">{tick.toFixed(1)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-1 pt-1">
+        <span style={{ fontSize: '64px', fontWeight: 900, color: statusColor, lineHeight: 1 }}>
+          {clamped.toFixed(2)}
+        </span>
+        <span className="text-sm font-bold text-gray-800">{statusText}</span>
       </div>
     </div>
   );
 }
 
-// ─── Section Wrapper ──────────────────────────────────────────
-export function VisualIndicatorSection() {
+export function VisualIndicatorSection({
+  cpi = 0.85,
+  spi = 1.05,
+}: {
+  cpi?: number;
+  spi?: number;
+}) {
   return (
-    <div className="w-full h-121.25 bg-white border border-gray-100 rounded-2xl px-8 py-4 flex flex-col gap-4.5">
-      <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1B1C1F', letterSpacing: '0.08em', marginBottom: '18px' }}>
-        Visual Indicator
-      </h2>
-      <div className="flex flex-1 gap-4.5">
-        <GaugeChart label="Cost Performance Index" value={1.01} type="cost" />
-        <GaugeChart label="Schedule Performance Index" value={1.05} type="schedule" />
+    <div className="w-full bg-white border border-gray-100 rounded-2xl px-8 py-6 flex flex-col gap-5">
+      <h2 className="text-base font-bold text-gray-900 tracking-wide">Visual Indicator</h2>
+      <div className="flex gap-4">
+        <GaugeChart label="Cost Performance Index" value={cpi} type="cost" />
+        <GaugeChart label="Schedule Performance Index" value={spi} type="schedule" />
       </div>
     </div>
   );
