@@ -14,6 +14,7 @@ import {
   CaretDownIcon,
   CaretDoubleLeftIcon
 } from '@phosphor-icons/react';
+import { useSidebar } from '@/components/layout/SidebarContext';
 
 function WikaLogo() {
   return (
@@ -59,15 +60,16 @@ const menuGroups: { title: string; items: { href: string; label: string; Icon: P
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { collapsed, toggle, width } = useSidebar();
 
   return (
     <aside
-      className="fixed top-0 left-0 h-screen flex flex-col bg-sidebar border-r border-gray-200 text-dark-gray antialiased"
-      style={{ width: '237px' }}
+      className="fixed top-0 left-0 h-screen flex flex-col bg-sidebar border-r border-gray-200 text-dark-gray antialiased transition-[width] duration-300 ease-in-out overflow-hidden"
+      style={{ width: `${width}px` }}
     >
 
       <div
-        className="flex items-center justify-between border-b border-[#E9E9EA] shrink-0"
+        className={`flex items-center border-b border-[#E9E9EA] shrink-0 ${collapsed ? 'justify-center' : 'justify-between'}`}
         style={{
           height: '89px',
           paddingTop: '24px',
@@ -76,13 +78,17 @@ export default function Sidebar() {
           paddingLeft: '18px'
         }}
       >
-        <WikaLogo />
+        {!collapsed && <WikaLogo />}
 
         <button
-          className="hover:bg-gray-200 border border-gray-200 bg-white transition-colors flex items-center justify-center shrink-0"
+          onClick={toggle}
+          className="hover:bg-gray-200 border border-gray-200 bg-white transition-all flex items-center justify-center shrink-0"
           style={{ width: '20px', height: '20px', borderRadius: '4px' }}
         >
-          <CaretDoubleLeftIcon size={16} className="text-[#1B1C1F]" />
+          <CaretDoubleLeftIcon
+            size={16}
+            className={`text-[#1B1C1F] transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
+          />
         </button>
       </div>
 
@@ -91,9 +97,11 @@ export default function Sidebar() {
           .filter((group) => group.title === 'General')
           .map((group) => (
             <div key={group.title}>
-              <h3 className="px-4 text-[11px] font-semibold text-gray-400 tracking-wider mb-2">
-                {group.title}
-              </h3>
+              {!collapsed && (
+                <h3 className="px-4 text-[11px] font-semibold text-gray-400 tracking-wider mb-2">
+                  {group.title}
+                </h3>
+              )}
               <nav className="space-y-1">
                 {group.items.map((item) => {
                   const isActive = pathname === item.href;
@@ -101,17 +109,20 @@ export default function Sidebar() {
                   <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                      title={collapsed ? item.label : undefined}
+                      className={`flex items-center rounded-xl transition-all overflow-hidden whitespace-nowrap ${
+                        collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-4 py-2.5'
+                      } ${
                         isActive
                           ? 'bg-primary-blue text-white shadow-lg shadow-blue-900/20 font-bold text-[14px] leading-[150%]'
                           : 'text-[#1B1C1F] hover:bg-gray-200/60 font-medium text-[14px] leading-[150%]'
                       }`}
                       style={{ fontFamily: 'Inter, sans-serif' }}
                     >
-                      <span className={isActive ? 'text-white' : 'text-[#1B1C1F]'}>
+                      <span className={`shrink-0 ${isActive ? 'text-white' : 'text-[#1B1C1F]'}`}>
                         <item.Icon size={20} weight={isActive ? 'fill' : 'regular'} />
                       </span>
-                      {item.label}
+                      {!collapsed && item.label}
                     </Link>
                   );
                 })}
@@ -122,12 +133,14 @@ export default function Sidebar() {
 
       <div
         className="mt-auto flex flex-col justify-between shrink-0"
-        style={{ width: '100%', height: '237px' }}
+        style={{ width: '100%', height: collapsed ? 'auto' : '237px' }}
       >
-        <div className="px-4 pt-2">
-          <h3 className="text-[11px] font-semibold text-gray-400 tracking-wider mb-3">
-            Others
-          </h3>
+        <div className={collapsed ? 'px-3 pt-2' : 'px-4 pt-2'}>
+          {!collapsed && (
+            <h3 className="text-[11px] font-semibold text-gray-400 tracking-wider mb-3">
+              Others
+            </h3>
+          )}
           <nav className="space-y-1">
             {menuGroups[1].items.map((item) => {
               const isActive = pathname === item.href;
@@ -135,16 +148,19 @@ export default function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  title={collapsed ? item.label : undefined}
+                  className={`flex items-center rounded-lg text-sm font-medium transition-all overflow-hidden whitespace-nowrap ${
+                    collapsed ? 'justify-center px-0 py-2' : 'gap-3 px-3 py-2'
+                  } ${
                     isActive
                       ? 'bg-primary-blue text-white'
                       : 'text-[#1B1C1F] hover:bg-gray-100'
                   }`}
                 >
-                  <span className={isActive ? 'text-white' : 'text-[#1B1C1F]'}>
+                  <span className={`shrink-0 ${isActive ? 'text-white' : 'text-[#1B1C1F]'}`}>
                     <item.Icon size={18} weight={isActive ? 'fill' : 'regular'} />
                   </span>
-                  {item.label}
+                  {!collapsed && item.label}
                 </Link>
               );
             })}
@@ -152,28 +168,32 @@ export default function Sidebar() {
         </div>
 
         <div
-          className="flex items-center justify-between border-t border-[#E9E9EA] group cursor-pointer bg-sidebar w-full shrink-0"
+          className={`flex items-center border-t border-[#E9E9EA] group cursor-pointer bg-sidebar w-full shrink-0 ${
+            collapsed ? 'justify-center' : 'justify-between'
+          }`}
           style={{
             height: '76px',
             paddingTop: '16px',
-            paddingRight: '18px',
+            paddingRight: collapsed ? '0' : '18px',
             paddingBottom: '24px',
-            paddingLeft: '18px',
+            paddingLeft: collapsed ? '0' : '18px',
             boxSizing: 'border-box'
           }}
         >
-          <div className="flex items-center gap-2.5 overflow-hidden">
+          <div className={`flex items-center overflow-hidden ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
             <div className="w-9 h-9 rounded-full bg-primary-blue shrink-0 border border-gray-200 shadow-sm"></div>
-            <div className="overflow-hidden text-left">
-              <p className="text-[13px] font-bold text-dark-gray truncate leading-tight">
-                Rista Mulia Putri
-              </p>
-              <p className="text-[11px] text-gray-500 truncate">
-                ristamulia@gmail.com
-              </p>
-            </div>
+            {!collapsed && (
+              <div className="overflow-hidden text-left">
+                <p className="text-[13px] font-bold text-dark-gray truncate leading-tight">
+                  Rista Mulia Putri
+                </p>
+                <p className="text-[11px] text-gray-500 truncate">
+                  ristamulia@gmail.com
+                </p>
+              </div>
+            )}
           </div>
-          <CaretDownIcon size={18} className="text-[#1B1C1F] bg-white shrink-0" />
+          {!collapsed && <CaretDownIcon size={18} className="text-[#1B1C1F] bg-white shrink-0" />}
         </div>
       </div>
     </aside>
