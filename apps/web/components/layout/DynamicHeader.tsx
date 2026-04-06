@@ -16,6 +16,10 @@ export default function DynamicHeader() {
       sub: "List of all active projects",
     },
     "/upload": { title: "Upload Project", sub: "Import Excel files" },
+    "/aliases": {
+      title: "Column Alias Management",
+      sub: "Manage Excel header mappings",
+    },
   };
 
   const current = headerMap[pathname] || { title: "Dashboard" };

@@ -27,6 +27,7 @@ function StatusBadge({ status }: { status: ProjectStatus }) {
     good:     { dot: 'bg-[#22C55E]', bg: 'bg-[#F0FDF4]', text: 'text-[#166534]', label: 'On Track'  },
     warning:  { dot: 'bg-[#EAB308]', bg: 'bg-[#FFFBEB]', text: 'text-[#854D0E]', label: 'At Risk'   },
     critical: { dot: 'bg-[#EF4444]', bg: 'bg-[#FEF2F2]', text: 'text-[#991B1B]', label: 'Critical'  },
+    unknown:  { dot: 'bg-[#94A3B8]', bg: 'bg-[#F8FAFC]', text: 'text-[#475569]', label: 'Incomplete'  },
   }[status];
 
   return (
@@ -40,14 +41,15 @@ function StatusBadge({ status }: { status: ProjectStatus }) {
   );
 }
 
-function KpiCell({ value }: { value: string }) {
-  const num = parseFloat(value);
+function KpiCell({ value }: { value: string | null }) {
+  const num = value === null ? Number.NaN : parseFloat(value);
   const colorClass = isNaN(num) ? 'text-gray-600' : num >= 1 ? 'text-[#16A34A]' : 'text-[#DC2626]';
   return <span className={`text-[13px] font-bold ${colorClass}`}>{formatKpi(value)}</span>;
 }
 
 export default function ProjectTable({ projects, sortBy, sortDir, onSort }: Props) {
   const router = useRouter();
+  void sortDir;
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage    = 10;
   const totalPages      = Math.ceil(projects.length / itemsPerPage);

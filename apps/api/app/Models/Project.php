@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Services\KpiCalculatorService;
 
 class Project extends Model
@@ -34,8 +36,8 @@ class Project extends Model
         'actual_cost'     => 'decimal:2',
         'progress_pct'    => 'decimal:2',
         'project_year' => 'integer',
-        'cpi'             => 'decimal:1',
-        'spi'             => 'decimal:1',
+        'cpi'             => 'decimal:4',
+        'spi'             => 'decimal:4',
         'planned_duration'=> 'integer',
         'actual_duration' => 'integer',
     ];
@@ -49,10 +51,11 @@ class Project extends Model
             }
 
             $kpi = (new KpiCalculatorService())->calculate(
-                (float) $project->planned_cost,
-                (float) $project->actual_cost,
-                (int)   $project->planned_duration,
-                (int)   $project->actual_duration,
+                $project->planned_cost  !== null ? (float) $project->planned_cost  : null,
+                $project->actual_cost   !== null ? (float) $project->actual_cost   : null,
+                $project->planned_duration !== null ? (int) $project->planned_duration : null,
+                $project->actual_duration  !== null ? (int) $project->actual_duration  : null,
+                $project->progress_pct  !== null ? (float) $project->progress_pct  : 100.0,
             );
 
             $project->cpi    = $kpi['cpi'];
@@ -102,5 +105,25 @@ class Project extends Model
     public function getIsDelayAttribute(): bool
     {
         return $this->spi < 1;
+    }
+
+    public function ingestionFile(): BelongsTo
+    {
+        return $this->belongsTo(IngestionFile::class);
+    }
+
+    public function periods(): HasMany
+    {
+        return $this->hasMany(ProjectPeriod::class);
+    }
+
+    public function progressCurves(): HasMany
+    {
+        return $this->hasMany(ProjectProgressCurve::class);
+    }
+
+    public function risks(): HasMany
+    {
+        return $this->hasMany(ProjectRisk::class);
     }
 }

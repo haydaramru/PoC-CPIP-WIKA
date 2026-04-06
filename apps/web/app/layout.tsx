@@ -1,23 +1,18 @@
-// app/layout.tsx
-import './globals.css';
-import Sidebar from '@/components/layout/Sidebar';
-import DynamicHeader from '@/components/layout/DynamicHeader'; // Impor pembungkus client kita
+import "./globals.css";
+import AuthGuard from "@/components/auth/AuthGuard";
+import AppShell from "@/components/layout/AppShell";
 
 export const metadata = {
-  title: 'Project Performance Dashboard',
+  title: "Project Performance Dashboard – CPIP",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="min-h-screen bg-white">
-        <Sidebar />
-        <main className="ml-59.25 bg-white">
-          <DynamicHeader />
-          <div className="relative w-full">
-            {children}
-          </div>
-        </main>
+        <AuthGuard>
+          <AppShell>{children}</AppShell>
+        </AuthGuard>
       </body>
     </html>
   );

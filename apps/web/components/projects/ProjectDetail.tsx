@@ -6,23 +6,19 @@ import type { Project } from '@/types/project';
 import PerformanceSummary   from '@/components/projects/detail/PerformanceSummary';
 import GaugeChart            from '@/components/projects/detail/GaugeChart';
 import InsightBox            from '@/components/projects/detail/InsightBox';
+import IngestionDataPanel    from '@/components/projects/detail/IngestionDataPanel';
 
 type Props = { id: number };
 
 export default function ProjectDetail({ id }: Props) {
   const [project,     setProject]     = useState<Project | null>(null);
-  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
 
   useEffect(() => {
-    Promise.all([
-      projectApi.detail(id),
-      projectApi.list(),
-    ])
-      .then(([detailRes, listRes]) => {
+    projectApi.detail(id)
+      .then((detailRes) => {
         setProject(detailRes.data);
-        setAllProjects(listRes.data);
       })
       .catch(() => setError('Project tidak ditemukan atau server tidak dapat dijangkau.'))
       .finally(() => setLoading(false));
@@ -86,6 +82,7 @@ export default function ProjectDetail({ id }: Props) {
       </div>
 
       <InsightBox project={project} />
+      <IngestionDataPanel key={project.id} projectId={project.id} />
     </div>
   );
 }

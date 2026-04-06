@@ -1,0 +1,593 @@
+{
+  "info": {
+    "_postman_id": "8f4f3a46-4f0b-4bd4-9f42-0f1746fe9f01",
+    "name": "CPIP API",
+    "description": "Collection untuk API CPIP backend. Semua request menggunakan Bearer Token Sanctum via variable {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "projectId",
+      "value": "1"
+    },
+    {
+      "key": "period",
+      "value": "2026-03"
+    },
+    {
+      "key": "periodId",
+      "value": "1"
+    },
+    {
+      "key": "riskId",
+      "value": "1"
+    },
+    {
+      "key": "ingestionFileId",
+      "value": "1"
+    },
+    {
+      "key": "columnAliasId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "List Projects",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects?division=Infrastructure&sort_by=cpi&sort_dir=asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects"
+              ],
+              "query": [
+                {
+                  "key": "division",
+                  "value": "Infrastructure"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "cpi"
+                },
+                {
+                  "key": "sort_dir",
+                  "value": "asc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_code\": \"NEW-01\",\n  \"project_name\": \"New Project\",\n  \"division\": \"Building\",\n  \"owner\": \"PT Contoh Owner\",\n  \"contract_value\": 300000000,\n  \"planned_cost\": 270000000,\n  \"actual_cost\": 255000000,\n  \"planned_duration\": 14,\n  \"actual_duration\": 14,\n  \"progress_pct\": 100,\n  \"project_year\": 2026\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Show Project",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_code\": \"NEW-01\",\n  \"project_name\": \"New Project Updated\",\n  \"division\": \"Infrastructure\",\n  \"owner\": \"PT Owner Update\",\n  \"contract_value\": 320000000,\n  \"planned_cost\": 280000000,\n  \"actual_cost\": 260000000,\n  \"planned_duration\": 15,\n  \"actual_duration\": 14,\n  \"progress_pct\": 95,\n  \"project_year\": 2026\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Project",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Insight",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/insight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "insight"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Excel",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "upload"
+              ]
+            },
+            "description": "Gunakan key `files` sebagai file upload. Bisa tambah beberapa file dengan key yang sama."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Periods",
+      "item": [
+        {
+          "name": "List Periods by Project",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Show Period Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/periods/{{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "periods",
+                "{{period}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Work Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/{{periodId}}/work-items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "{{periodId}}",
+                "work-items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Materials",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/{{periodId}}/materials",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "{{periodId}}",
+                "materials"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Equipment",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/{{periodId}}/equipment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "{{periodId}}",
+                "equipment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Progress Curve",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/progress-curve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "progress-curve"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Risks",
+      "item": [
+        {
+          "name": "List Risks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/risks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "risks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Risk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"risk_code\": \"RSK-001\",\n  \"risk_title\": \"Escalation harga material\",\n  \"risk_description\": \"Harga material utama meningkat di atas asumsi awal.\",\n  \"category\": \"cost\",\n  \"financial_impact_idr\": 150000000,\n  \"probability\": 4,\n  \"impact\": 5,\n  \"mitigation\": \"Negosiasi ulang supplier dan review alternatif material.\",\n  \"status\": \"open\",\n  \"owner\": \"Project Manager\",\n  \"identified_at\": \"2026-03-01\",\n  \"target_resolved_at\": \"2026-04-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/risks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "risks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Risk",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"monitoring\",\n  \"mitigation\": \"Mitigasi berjalan dan harga mulai stabil.\",\n  \"probability\": 3,\n  \"impact\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/risks/{{riskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "risks",
+                "{{riskId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Risk",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/risks/{{riskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "risks",
+                "{{riskId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ingestion Files",
+      "item": [
+        {
+          "name": "List Ingestion Files",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ingestion-files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ingestion-files"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Ingestion File",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ingestion-files/{{ingestionFileId}}/download",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ingestion-files",
+                "{{ingestionFileId}}",
+                "download"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reprocess Ingestion File",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/ingestion-files/{{ingestionFileId}}/reprocess",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ingestion-files",
+                "{{ingestionFileId}}",
+                "reprocess"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Column Aliases",
+      "item": [
+        {
+          "name": "List Column Aliases",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/column-aliases?context=project&active_only=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "column-aliases"
+              ],
+              "query": [
+                {
+                  "key": "context",
+                  "value": "project"
+                },
+                {
+                  "key": "active_only",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Column Alias",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alias\": \"kode_unik_proyek\",\n  \"target_field\": \"project_code\",\n  \"context\": \"project\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/column-aliases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "column-aliases"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Disable Column Alias",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/column-aliases/{{columnAliasId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "column-aliases",
+                "{{columnAliasId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

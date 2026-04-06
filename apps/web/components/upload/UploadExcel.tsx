@@ -21,6 +21,16 @@ interface FileProgress {
   result?: FileUploadResult;
 }
 
+interface ErrorSummaryItem {
+  message: string;
+  count: number;
+}
+
+interface UploadErrorLike {
+  message?: string;
+  responseData?: UploadResponse;
+}
+
 function validateFile(file: File): string | null {
   const allowed = [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -43,6 +53,79 @@ function uniqueId(): string {
   return Math.random().toString(36).slice(2);
 }
 
+function normalizeErrorMessage(message: string | undefined | null): string {
+  const value = (message ?? "").trim();
+  return value || "Terjadi kesalahan saat memproses file.";
+}
+
+function buildFallbackResult(file: File, message: string): FileUploadResult {
+  return {
+    file_id: 0,
+    file_name: file.name,
+    status: "failed",
+    total_rows: 0,
+    imported: 0,
+    skipped: 0,
+    errors: [normalizeErrorMessage(message)],
+    warnings: [],
+    scanner: "unknown",
+    suggestion: null,
+    unrecognized_columns: [],
+  };
+}
+
+function summarizeErrors(results: FileUploadResult[]): ErrorSummaryItem[] {
+  const counts = new Map<string, number>();
+
+  results.forEach((result) => {
+    result.errors.forEach((error) => {
+      const message = normalizeErrorMessage(error);
+      counts.set(message, (counts.get(message) ?? 0) + 1);
+    });
+  });
+
+  return Array.from(counts.entries())
+    .map(([message, count]) => ({ message, count }))
+    .sort((a, b) => b.count - a.count || a.message.localeCompare(b.message));
+}
+
+function buildCompletionMessage(results: FileUploadResult[], anySuccess: boolean): string {
+  if (anySuccess) {
+    const importedFiles = results.filter((result) =>
+      ["success", "partial"].includes(result.status),
+    ).length;
+    const failedFiles = results.filter((result) => result.status === "failed").length;
+
+    if (failedFiles === 0) {
+      return "Semua file berhasil diimport.";
+    }
+
+    return `${importedFiles} file berhasil diproses, ${failedFiles} file gagal.`;
+  }
+
+  const [topError] = summarizeErrors(results);
+  if (!topError) {
+    return "Semua file gagal diimport.";
+  }
+
+  const suffix =
+    topError.count > 1 ? ` (${topError.count} file)` : "";
+
+  return `Semua file gagal diimport. Penyebab utama: ${topError.message}${suffix}`;
+}
+
+function toUploadError(error: unknown): UploadErrorLike {
+  if (error instanceof Error) {
+    return error as UploadErrorLike;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    return error as UploadErrorLike;
+  }
+
+  return {};
+}
+
 export default function UploadExcel() {
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
@@ -61,6 +144,9 @@ export default function UploadExcel() {
   const isDone = uploadState === "done";
   const validFiles = selectedFiles.filter((f) => !f.validationError);
   const invalidCount = selectedFiles.length - validFiles.length;
+  const errorSummary = uploadResponse
+    ? summarizeErrors(uploadResponse.results)
+    : [];
 
   function addFiles(newFiles: File[]) {
     const existingNames = new Set(selectedFiles.map((f) => f.file.name));
@@ -146,13 +232,19 @@ export default function UploadExcel() {
           [sf.id]: { percent: 100, status: "done", result },
         }));
         if (result) allResults.push(result);
-      } catch (err: any) {
-        const result = err?.responseData?.results?.[0];
+      } catch (err: unknown) {
+        const uploadError = toUploadError(err);
+        const result =
+          uploadError.responseData?.results?.[0] ??
+          buildFallbackResult(
+            sf.file,
+            uploadError.message ?? "Server tidak mengembalikan detail error.",
+          );
         setFileProgresses((prev) => ({
           ...prev,
           [sf.id]: { percent: 100, status: "error", result },
         }));
-        if (result) allResults.push(result);
+        allResults.push(result);
       }
     }
 
@@ -161,7 +253,7 @@ export default function UploadExcel() {
     );
     setUploadResponse({
       success: anySuccess,
-      message: anySuccess ? "Upload complete." : "All files failed to import.",
+      message: buildCompletionMessage(allResults, anySuccess),
       results: allResults,
     });
     setUploadState("done");
@@ -365,14 +457,29 @@ export default function UploadExcel() {
                       {result.errors.map((err, i) => (
                         <div
                           key={i}
-                          className="flex items-start gap-2 text-xs text-gray-500"
+                          className="flex items-start gap-2 text-xs text-red-600"
                         >
-                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0" />
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
                           {err}
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {hasResult && result.suggestion && (
+                    <div className="mt-2 ml-11 text-xs text-amber-700">
+                      Saran: {result.suggestion}
+                    </div>
+                  )}
+
+                  {hasResult &&
+                    result.unrecognized_columns &&
+                    result.unrecognized_columns.length > 0 && (
+                      <div className="mt-2 ml-11 text-xs text-gray-500">
+                        Kolom belum dikenali:{" "}
+                        {result.unrecognized_columns.join(", ")}
+                      </div>
+                    )}
                 </div>
               );
             })}
@@ -469,6 +576,27 @@ export default function UploadExcel() {
                 </p>
               </div>
             </div>
+
+            {!uploadResponse.success && errorSummary.length > 0 && (
+              <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                  Penyebab Yang Terdeteksi
+                </p>
+                <div className="space-y-2">
+                  {errorSummary.slice(0, 3).map((item) => (
+                    <div
+                      key={item.message}
+                      className="flex items-start justify-between gap-3 text-sm text-red-800"
+                    >
+                      <span className="flex-1">{item.message}</span>
+                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                        {item.count} file
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end">
               <button

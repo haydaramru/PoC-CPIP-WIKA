@@ -1,6 +1,7 @@
-export type ProjectStatus = 'good' | 'warning' | 'critical';
+export type ProjectStatus = 'good' | 'warning' | 'critical' | 'unknown';
 export type Division = 'Infrastructure' | 'Building';
 export type IngestionStatus = 'pending' | 'processing' | 'success' | 'failed' | 'partial';
+export type AliasContext = 'project' | 'work_item' | 'material' | 'equipment' | 'period' | 's_curve';
 
 export interface Project {
   id: number;
@@ -15,10 +16,93 @@ export interface Project {
   actual_duration: number;
   progress_pct: string;
   project_year: number;
-  cpi: string;
-  spi: string;
+  cpi: string | null;
+  spi: string | null;
   status: ProjectStatus;
   ingestion_file_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectPeriod {
+  id: number;
+  project_id: number;
+  ingestion_file_id: number | null;
+  period: string;
+  client_name: string | null;
+  project_manager: string | null;
+  report_source: string | null;
+  progress_prev_pct: string | null;
+  progress_this_pct: string | null;
+  progress_total_pct: string | null;
+  contract_value: string | null;
+  addendum_value: string | null;
+  total_pagu: string | null;
+  hpp_plan_total: string | null;
+  hpp_actual_total: string | null;
+  hpp_deviation: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectWorkItem {
+  id: number;
+  period_id: number;
+  parent_id: number | null;
+  level: number;
+  item_no: string | null;
+  item_name: string;
+  sort_order: number | null;
+  budget_awal: string | null;
+  addendum: string | null;
+  total_budget: string | null;
+  realisasi: string | null;
+  deviasi: string | null;
+  deviasi_pct: string | null;
+  is_total_row: boolean;
+  children: ProjectWorkItem[];
+}
+
+export interface ProjectMaterialLog {
+  id: number;
+  period_id: number;
+  work_item_id: number | null;
+  supplier_name: string | null;
+  material_type: string | null;
+  qty: string | null;
+  satuan: string | null;
+  harga_satuan: string | null;
+  total_tagihan: string | null;
+  is_discount: boolean;
+  source_row: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectEquipmentLog {
+  id: number;
+  period_id: number;
+  work_item_id: number | null;
+  vendor_name: string | null;
+  equipment_name: string | null;
+  jam_kerja: string | null;
+  rate_per_jam: string | null;
+  total_biaya: string | null;
+  payment_status: string | null;
+  source_row: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectProgressCurve {
+  id: number;
+  project_id: number;
+  week_number: number | null;
+  week_date: string | null;
+  rencana_pct: string | null;
+  realisasi_pct: string | null;
+  deviasi_pct: string | null;
+  keterangan: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +120,36 @@ export interface ProjectListMeta {
 export interface ProjectListResponse {
   data: Project[];
   meta: ProjectListMeta;
+}
+
+export interface ProjectPeriodListResponse {
+  data: ProjectPeriod[];
+}
+
+export interface ProjectWorkItemListResponse {
+  data: ProjectWorkItem[];
+}
+
+export interface MaterialLogListResponse {
+  data: ProjectMaterialLog[];
+  meta: {
+    total_tagihan: number;
+    total_rows: number;
+    discount_rows: number;
+  };
+}
+
+export interface EquipmentLogListResponse {
+  data: ProjectEquipmentLog[];
+  meta: {
+    total_biaya: number;
+    total_rows: number;
+    pending_count: number;
+  };
+}
+
+export interface ProgressCurveListResponse {
+  data: ProjectProgressCurve[];
 }
 
 export interface DivisionSummary {
@@ -66,11 +180,25 @@ export interface FileUploadResult {
   imported: number;
   skipped: number;
   errors: string[];
+  warnings?: string[];
+  scanner?: string;
+  suggestion?: string | null;
+  unrecognized_columns?: string[];
+  field_trace?: Record<string, unknown>;
+  field_candidates?: Record<string, unknown>;
+  field_conflicts?: Record<string, unknown>;
+  project_row_trace?: Record<string, unknown>;
+  project_row_conflicts?: Record<string, unknown>;
 }
 
 export interface UploadResponse {
   success: boolean;
   message: string;
+  total_rows?: number;
+  imported?: number;
+  skipped?: number;
+  errors?: string[];
+  warnings?: string[];
   results: FileUploadResult[];
 }
 
@@ -137,4 +265,19 @@ export interface IngestionLogResponse {
     per_page: number;
     total: number;
   };
+}
+
+export interface ColumnAlias {
+  id: number;
+  alias: string;
+  target_field: string;
+  context: AliasContext | null;
+  is_active: boolean;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ColumnAliasListResponse {
+  data: ColumnAlias[];
 }

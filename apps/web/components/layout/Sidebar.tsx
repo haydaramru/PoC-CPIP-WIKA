@@ -7,6 +7,7 @@ import {
   LayoutDashboard, 
   BarChart3, 
   Upload, 
+  TableProperties,
   Bell, 
   Settings, 
   LogOut, 
@@ -21,6 +22,7 @@ const menuGroups = [
       { href: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
       { href: '/projects', label: 'Project List', icon: <BarChart3 size={20} /> },
       { href: '/upload', label: 'Data Ingestion', icon: <Upload size={20} /> },
+      { href: '/aliases', label: 'Column Aliases', icon: <TableProperties size={20} /> },
     ]
   },
   {
