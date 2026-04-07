@@ -1,7 +1,8 @@
 // app/layout.tsx
 import './globals.css';
-import SidebarProvider from '@/components/';
-import DynamicHeader from '@/components/layout/DynamicHeader'; // Impor pembungkus client kita
+import { SidebarProvider } from '@/components/layout/SidebarContext';
+import AuthGuard from '@/components/auth/AuthGuard';
+import LayoutShell from '@/components/layout/LayoutShell';
 
 export const metadata = {
   title: "Project Performance Dashboard – CPIP",
@@ -12,11 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen bg-white">
         <SidebarProvider>
-          <LayoutShell>{children}</LayoutShell>
+          <AuthGuard>
+            <LayoutShell>{children}</LayoutShell>
+          </AuthGuard>
         </SidebarProvider>
-        <AuthGuard>
-          <AppShell>{children}</AppShell>
-        </AuthGuard>
       </body>
     </html>
   );

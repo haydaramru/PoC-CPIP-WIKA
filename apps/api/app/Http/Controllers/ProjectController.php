@@ -24,6 +24,9 @@ class ProjectController extends Controller
         $query = Project::query();
 
         $query->byDivision($request->division);
+        $query->bySbu($request->sbu);
+        $query->byLocation($request->location);
+        $query->byPartnership($request->partnership);
         $query->byContractRange(
             $request->filled('min_contract') ? (float) $request->min_contract : null,
             $request->filled('max_contract') ? (float) $request->max_contract : null,
@@ -33,8 +36,8 @@ class ProjectController extends Controller
         $year = $request->filled('year') ? (int) $request->year : null;
         $query->byYear($year);
 
-        $sortBy  = in_array($request->sort_by, ['cpi', 'spi', 'contract_value', 'project_name'])
-                    ? $request->sort_by : 'cpi';   // default CPI ascending sesuai brief
+        $sortBy  = in_array($request->sort_by, ['cpi', 'spi', 'contract_value', 'project_name', 'gross_profit_pct'])
+                    ? $request->sort_by : 'cpi';
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
         $query->orderBy($sortBy, $sortDir);
 
@@ -118,6 +121,41 @@ class ProjectController extends Controller
         $overbudgetCount = (int) $stats->overbudget_count;
         $delayCount      = (int) $stats->delay_count;
 
+        // Top-10 profitability — use stored gross_profit_pct if set, else calculate from contract/actual
+        $profitability = DB::table('projects')
+            ->select('project_name', 'gross_profit_pct', 'contract_value', 'actual_cost')
+            ->where('contract_value', '>', 0)
+            ->orderByRaw('
+                COALESCE(
+                    gross_profit_pct,
+                    (contract_value - actual_cost) / contract_value * 100
+                ) DESC
+            ')
+            ->limit(10)
+            ->get()
+            ->map(fn($r) => [
+                'name' => $r->project_name,
+                'pct'  => round(
+                    $r->gross_profit_pct !== null
+                        ? (float) $r->gross_profit_pct
+                        : (($r->contract_value - $r->actual_cost) / $r->contract_value * 100),
+                    1
+                ) . '%',
+            ]);
+
+        // Top-10 overrun (highest cost overrun %)
+        $overrun = DB::table('projects')
+            ->select('project_name', 'planned_cost', 'actual_cost')
+            ->where('actual_cost', '>', DB::raw('planned_cost'))
+            ->where('planned_cost', '>', 0)
+            ->orderByRaw('(actual_cost - planned_cost) / planned_cost DESC')
+            ->limit(10)
+            ->get()
+            ->map(fn($r) => [
+                'name' => $r->project_name,
+                'pct'  => round((($r->actual_cost - $r->planned_cost) / $r->planned_cost) * 100, 1) . '%',
+            ]);
+
         return response()->json([
             'total_projects'   => $total,
             'avg_cpi'          => round((float) $stats->avg_cpi, 4),
@@ -128,6 +166,53 @@ class ProjectController extends Controller
             'delay_pct'        => round($delayCount      / $total * 100, 1),
             'by_division'      => $byDivision,
             'status_breakdown' => $statusBreakdown,
+            'profitability'    => $profitability,
+            'overrun'          => $overrun,
+        ]);
+    }
+
+
+    public function sbuDistribution(): JsonResponse
+    {
+        $rows = DB::table('projects')
+            ->select('sbu', DB::raw('COUNT(*) as value'))
+            ->whereNotNull('sbu')
+            ->where('sbu', '!=', '')
+            ->groupBy('sbu')
+            ->orderByDesc('value')
+            ->get()
+            ->map(fn($r) => [
+                'label' => $r->sbu,
+                'value' => (int) $r->value,
+            ]);
+
+        return response()->json(['data' => $rows]);
+    }
+
+
+    public function filterOptions(): JsonResponse
+    {
+        $pluck = fn(string $col) => Project::distinct()
+            ->whereNotNull($col)
+            ->where($col, '!=', '')
+            ->orderBy($col)
+            ->pluck($col)
+            ->values();
+
+        return response()->json([
+            'division'       => $pluck('division'),
+            'sbu'            => $pluck('sbu'),
+            'owner'          => $pluck('owner'),
+            'contract_type'  => $pluck('contract_type'),
+            'payment_method' => $pluck('payment_method'),
+            'partnership'    => $pluck('partnership'),
+            'funding_source' => $pluck('funding_source'),
+            'location'       => $pluck('location'),
+            'year'           => Project::distinct()
+                ->whereNotNull('project_year')
+                ->orderByDesc('project_year')
+                ->pluck('project_year')
+                ->values(),
         ]);
     }
 

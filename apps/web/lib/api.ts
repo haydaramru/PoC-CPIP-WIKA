@@ -15,6 +15,13 @@ import type {
   MaterialLogListResponse,
   EquipmentLogListResponse,
   ProgressCurveListResponse,
+  FilterOptionsResponse,
+  SbuDistributionItem,
+  ProjectPhaseListResponse,
+  WorkItemLevel4ListResponse,
+  MaterialLogLevel5ListResponse,
+  RiskListResponse,
+  ProgressCurveResponse,
 } from "@/types/project";
 import { getToken } from "@/lib/auth";
 
@@ -84,9 +91,12 @@ api.interceptors.request.use((config) => {
 
 export type ProjectFilters = {
   division?: string;
+  sbu?: string;
+  location?: string;
+  partnership?: string;
   status?: string;
   year?: number;
-  sort_by?: "cpi" | "spi" | "contract_value" | "project_name";
+  sort_by?: "cpi" | "spi" | "contract_value" | "project_name" | "gross_profit_pct";
   sort_dir?: "asc" | "desc";
   min_contract?: number;
   max_contract?: number;
@@ -105,11 +115,20 @@ export const projectApi = {
   insight: (id: number): Promise<InsightResponse> =>
     api.get(`/projects/${id}/insight`).then((r) => r.data),
 
-  periods: (id: number): Promise<ProjectPeriodListResponse> =>
+  periods: (id: number): Promise<ProjectPhaseListResponse> =>
     api.get(`/projects/${id}/periods`).then((r) => r.data),
 
-  progressCurve: (id: number): Promise<ProgressCurveListResponse> =>
+  progressCurve: (id: number): Promise<ProgressCurveResponse> =>
     api.get(`/projects/${id}/progress-curve`).then((r) => r.data),
+
+  risks: (id: number): Promise<RiskListResponse> =>
+    api.get(`/projects/${id}/risks`).then((r) => r.data),
+
+  filterOptions: (): Promise<FilterOptionsResponse> =>
+    api.get("/projects/filter-options").then((r) => r.data),
+
+  sbuDistribution: (): Promise<{ data: SbuDistributionItem[] }> =>
+    api.get("/projects/sbu-distribution").then((r) => r.data),
 
   upload: (
     files: File | File[],
@@ -213,10 +232,10 @@ export const projectApi = {
 };
 
 export const periodApi = {
-  workItems: (periodId: number): Promise<ProjectWorkItemListResponse> =>
+  workItems: (periodId: number): Promise<WorkItemLevel4ListResponse> =>
     api.get(`/periods/${periodId}/work-items`).then((r) => r.data),
 
-  materials: (periodId: number): Promise<MaterialLogListResponse> =>
+  materials: (periodId: number): Promise<MaterialLogLevel5ListResponse> =>
     api.get(`/periods/${periodId}/materials`).then((r) => r.data),
 
   equipment: (periodId: number): Promise<EquipmentLogListResponse> =>
@@ -265,6 +284,11 @@ export type ColumnAliasPayload = {
   target_field: string;
   context: AliasContext | null;
   is_active?: boolean;
+};
+
+export const harsatApi = {
+  trend: (): Promise<{ data: { years: string[]; categories: { key: string; label: string }[]; data: Record<string, number[]> } | null }> =>
+    api.get("/harsat/trend").then((r) => r.data),
 };
 
 export const columnAliasApi = {

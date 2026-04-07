@@ -8,14 +8,22 @@ export interface Project {
   project_code: string;
   project_name: string;
   division: Division;
+  sbu: string | null;
   owner: string | null;
+  contract_type: string | null;
+  payment_method: string | null;
+  partnership: string | null;
+  funding_source: string | null;
+  location: string | null;
   contract_value: string;
   planned_cost: string;
   actual_cost: string;
   planned_duration: number;
   actual_duration: number;
   progress_pct: string;
+  gross_profit_pct: string | null;
   project_year: number;
+  start_date: string | null;
   cpi: string | null;
   spi: string | null;
   status: ProjectStatus;
@@ -160,6 +168,28 @@ export interface DivisionSummary {
   delay_count: number;
 }
 
+export interface ParetoItem {
+  name: string;
+  pct: string;
+}
+
+export interface SbuDistributionItem {
+  label: string;
+  value: number;
+}
+
+export interface FilterOptionsResponse {
+  division: string[];
+  sbu: string[];
+  owner: string[];
+  contract_type: string[];
+  payment_method: string[];
+  partnership: string[];
+  funding_source: string[];
+  location: string[];
+  year: number[];
+}
+
 export interface SummaryResponse {
   total_projects: number;
   avg_cpi: number;
@@ -170,6 +200,127 @@ export interface SummaryResponse {
   delay_pct: number;
   by_division: Record<Division, DivisionSummary>;
   status_breakdown: Record<ProjectStatus, number>;
+  profitability: ParetoItem[];
+  overrun: ParetoItem[];
+}
+
+// Level 3 — project phases
+export interface ProjectPhase {
+  id: number;
+  name: string;
+  bqExternal: number;
+  rabInternal: number;
+  realisasi: number;
+  deviasi: number;
+}
+
+export interface ProjectPhaseListResponse {
+  data: {
+    project_name: string;
+    sbu: string | null;
+    owner: string | null;
+    contract_type: string | null;
+    phases: ProjectPhase[];
+  };
+}
+
+// Level 4 — work items
+export interface WorkItemLevel4 {
+  id: number;
+  name: string;
+  item_no: string | null;
+  totalBiaya: number;
+  realisasi: number;
+  deviasi: number;
+  deviasi_pct: number;
+  is_total_row: boolean;
+  children: WorkItemLevel4[];
+}
+
+export interface WorkItemLevel4ListResponse {
+  data: {
+    tahap: string;
+    rabInternal: number;
+    items: WorkItemLevel4[];
+  };
+}
+
+// Level 5 — material/vendor
+export interface MaterialLogLevel5 {
+  id: number;
+  material_type: string | null;
+  volume: number;
+  satuan: string | null;
+  vendor: {
+    nama: string | null;
+    tahunPerolehan: string | null;
+    lokasi: string | null;
+    ratingPerforma: string | null;
+  };
+  kontrak: {
+    nilaiKontrak: string | null;
+    hargaSatuan: string | null;
+    realisasiPengiriman: string | null;
+    deviasiHargaMarket: string | null;
+  };
+  catatanMonitoring: string | null;
+}
+
+export interface MaterialLogLevel5ListResponse {
+  data: MaterialLogLevel5[];
+  meta: { total_tagihan: number; total_rows: number };
+}
+
+// Level 7 — risks
+export interface ProjectRisk {
+  id: number;
+  risk_code: string | null;
+  risk_title: string;
+  risk_description: string | null;
+  category: string | null;
+  financial_impact_idr: string | null;
+  probability: number | null;
+  impact: number | null;
+  severity: string | null;
+  mitigation: string | null;
+  status: string | null;
+  owner: string | null;
+  identified_at: string | null;
+  target_resolved_at: string | null;
+}
+
+export interface RiskListResponse {
+  data: ProjectRisk[];
+  meta: {
+    total: number;
+    open_count: number;
+    critical_count: number;
+    total_financial_impact: number;
+  };
+}
+
+// Level 7 — progress curve (new format)
+export interface ProjectTimeline {
+  start_date: string | null;
+  planned_end: string | null;
+  actual_end: string | null;
+  planned: string | null;
+  actual: string | null;
+  delay_months: number;
+  delay_note: string;
+}
+
+export interface ProgressCurveResponse {
+  data: {
+    timeline: ProjectTimeline;
+    spi_value: number;
+    spi_status: string;
+    sCurve: {
+      months: string[];
+      plan: number[];
+      actual: number[];
+    } | null;
+  };
 }
 
 export interface FileUploadResult {

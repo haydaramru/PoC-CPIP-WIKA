@@ -1,19 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  BarChart3, 
-  Upload, 
-  TableProperties,
-  Bell, 
-  Settings, 
-  LogOut, 
-  ChevronDown,
-  ChevronLeft
-} from 'lucide-react';
+import {
+  House as HouseIcon,
+  ChartBar as ChartBarIcon,
+  ProjectorScreenChart as ProjectorScreenChartIcon,
+  Files as FilesIcon,
+  Bell as BellIcon,
+  GearSix as GearSixIcon,
+  SignOut as SignOutIcon,
+  CaretDoubleLeft as CaretDoubleLeftIcon,
+  CaretDown as CaretDownIcon,
+} from '@phosphor-icons/react';
+import { useSidebar } from '@/components/layout/SidebarContext';
 
 const menuGroups = [
   {
@@ -55,7 +56,7 @@ export default function Sidebar() {
           paddingLeft: '18px'
         }}
       >
-        {!collapsed && <WikaLogo />}
+        {!collapsed && <Image src="/logo-wika.svg" alt="WIKA Logo" width={80} height={32} priority />}
 
         <button
           onClick={toggle}

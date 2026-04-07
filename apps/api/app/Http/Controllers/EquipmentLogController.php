@@ -7,9 +7,9 @@ use Illuminate\Http\JsonResponse;
 
 class EquipmentLogController extends Controller
 {
-    public function index(ProjectPeriod $period): JsonResponse
+    public function index(ProjectPeriod $periodModel): JsonResponse
     {
-        $logs = $period->equipmentLogs()
+        $logs = $periodModel->equipmentLogs()
             ->orderBy('vendor_name')
             ->orderBy('id')
             ->get();

@@ -16,14 +16,22 @@ class Project extends Model
         'project_code',
         'project_name',
         'division',
+        'sbu',
         'owner',
+        'contract_type',
+        'payment_method',
+        'partnership',
+        'funding_source',
+        'location',
         'contract_value',
         'planned_cost',
         'actual_cost',
         'planned_duration',
         'actual_duration',
         'progress_pct',
+        'gross_profit_pct',
         'project_year',
+        'start_date',
         'cpi',
         'spi',
         'status',
@@ -31,15 +39,16 @@ class Project extends Model
     ];
 
     protected $casts = [
-        'contract_value'  => 'decimal:2',
-        'planned_cost'    => 'decimal:2',
-        'actual_cost'     => 'decimal:2',
-        'progress_pct'    => 'decimal:2',
-        'project_year' => 'integer',
-        'cpi'             => 'decimal:4',
-        'spi'             => 'decimal:4',
-        'planned_duration'=> 'integer',
-        'actual_duration' => 'integer',
+        'contract_value'   => 'decimal:2',
+        'planned_cost'     => 'decimal:2',
+        'actual_cost'      => 'decimal:2',
+        'progress_pct'     => 'decimal:2',
+        'project_year'     => 'integer',
+        'start_date'       => 'date',
+        'cpi'              => 'decimal:4',
+        'spi'              => 'decimal:4',
+        'planned_duration' => 'integer',
+        'actual_duration'  => 'integer',
     ];
 
     
@@ -69,6 +78,30 @@ class Project extends Model
     {
         if ($division) {
             return $query->where('division', $division);
+        }
+        return $query;
+    }
+
+    public function scopeBySbu($query, ?string $sbu)
+    {
+        if ($sbu) {
+            return $query->where('sbu', $sbu);
+        }
+        return $query;
+    }
+
+    public function scopeByLocation($query, ?string $location)
+    {
+        if ($location) {
+            return $query->where('location', $location);
+        }
+        return $query;
+    }
+
+    public function scopeByPartnership($query, ?string $partnership)
+    {
+        if ($partnership) {
+            return $query->where('partnership', $partnership);
         }
         return $query;
     }
@@ -105,6 +138,59 @@ class Project extends Model
     public function getIsDelayAttribute(): bool
     {
         return $this->spi < 1;
+    }
+
+    /**
+     * Gross profit = (contract_value - actual_cost) / contract_value * 100
+     * Uses stored value if explicitly set, otherwise calculates on-the-fly.
+     */
+    public function getGrossProfitPctAttribute(): ?string
+    {
+        // If manually stored, use it
+        $stored = $this->attributes['gross_profit_pct'] ?? null;
+        if ($stored !== null) {
+            return number_format((float) $stored, 2, '.', '');
+        }
+
+        $contract = (float) ($this->attributes['contract_value'] ?? 0);
+        $actual   = (float) ($this->attributes['actual_cost'] ?? 0);
+
+        if ($contract <= 0) return null;
+
+        return number_format((($contract - $actual) / $contract) * 100, 2, '.', '');
+    }
+
+    /**
+     * Returns formatted timeline for level-7 view.
+     * Derives end dates from start_date + duration (months).
+     */
+    public function getTimelineAttribute(): array
+    {
+        $fmt = fn($date) => $date ? $date->translatedFormat('d M Y') : null;
+
+        $plannedEnd = $this->start_date
+            ? $this->start_date->copy()->addMonths((int) $this->planned_duration - 1)->endOfMonth()
+            : null;
+
+        $actualEnd = $this->start_date
+            ? $this->start_date->copy()->addMonths((int) $this->actual_duration - 1)->endOfMonth()
+            : null;
+
+        $delay = (int) $this->actual_duration - (int) $this->planned_duration;
+
+        return [
+            'start_date'   => $fmt($this->start_date),
+            'planned_end'  => $fmt($plannedEnd),
+            'actual_end'   => $fmt($actualEnd),
+            'planned'      => $this->start_date
+                ? $fmt($this->start_date) . ' - ' . $fmt($plannedEnd)
+                : null,
+            'actual'       => $this->start_date
+                ? $fmt($this->start_date) . ' - ' . $fmt($actualEnd)
+                : null,
+            'delay_months' => $delay,
+            'delay_note'   => $delay > 0 ? "Delay {$delay} bulan" : ($delay < 0 ? "Lebih cepat " . abs($delay) . " bulan" : "On time"),
+        ];
     }
 
     public function ingestionFile(): BelongsTo

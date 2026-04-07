@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ColumnAliasController;
 use App\Http\Controllers\EquipmentLogController;
+use App\Http\Controllers\HarsatController;
 use App\Http\Controllers\MaterialLogController;
 use App\Http\Controllers\ProgressCurveController;
 use App\Http\Controllers\ProjectController;
@@ -24,16 +25,18 @@ Route::prefix('auth')->group(function () {
 
 // ── Read-only (public for PoC) ─────────────────────────────────────────────────
 Route::get('/projects/summary',                    [ProjectController::class, 'summary']);
+Route::get('/projects/sbu-distribution',           [ProjectController::class, 'sbuDistribution']);
+Route::get('/projects/filter-options',             [ProjectController::class, 'filterOptions']);
 Route::get('/projects/{project}/insight',          [ProjectController::class, 'insight']);
 Route::get('/projects',                            [ProjectController::class, 'index']);
 Route::get('/projects/{project}',                  [ProjectController::class, 'show']);
 
-Route::get('/projects/{project}/periods',          [ProjectPeriodController::class, 'index']);
-Route::get('/projects/{project}/periods/{period}', [ProjectPeriodController::class, 'show']);
+Route::get('/projects/{project}/periods',                    [ProjectPeriodController::class, 'index']);
+Route::get('/projects/{project}/periods/{periodModel}',      [ProjectPeriodController::class, 'show']);
 
-Route::get('/periods/{period}/work-items',         [WorkItemController::class, 'index']);
-Route::get('/periods/{period}/materials',          [MaterialLogController::class, 'index']);
-Route::get('/periods/{period}/equipment',          [EquipmentLogController::class, 'index']);
+Route::get('/periods/{periodModel}/work-items',              [WorkItemController::class, 'index']);
+Route::get('/periods/{periodModel}/materials',               [MaterialLogController::class, 'index']);
+Route::get('/periods/{periodModel}/equipment',               [EquipmentLogController::class, 'index']);
 
 Route::get('/projects/{project}/progress-curve',   [ProgressCurveController::class, 'index']);
 Route::get('/projects/{project}/risks',            [ProjectRiskController::class, 'index']);
@@ -43,6 +46,8 @@ Route::get('/ingestion-files/{ingestionFile}/download', [ProjectController::clas
 
 Route::get('/column-aliases',                      [ColumnAliasController::class, 'index']);
 Route::get('/column-aliases/{columnAlias}',        [ColumnAliasController::class, 'show']);
+
+Route::get('/harsat/trend',                        [HarsatController::class, 'trend']);
 
 // ── Write endpoints (protected) ────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -63,4 +68,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/column-aliases/{columnAlias}',         [ColumnAliasController::class, 'update']);
     Route::patch('/column-aliases/{columnAlias}',       [ColumnAliasController::class, 'update']);
     Route::delete('/column-aliases/{columnAlias}',      [ColumnAliasController::class, 'destroy']);
+
+    Route::post('/harsat',                              [HarsatController::class, 'store']);
 });

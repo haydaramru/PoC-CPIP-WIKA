@@ -8,27 +8,50 @@ use Illuminate\Http\JsonResponse;
 
 class WorkItemController extends Controller
 {
-    public function index(ProjectPeriod $period): JsonResponse
+    /**
+     * Level 4 — work items for a period, mapped to frontend format.
+     */
+    public function index(ProjectPeriod $periodModel): JsonResponse
     {
-        $roots = $period->workItems()
+        $roots = $periodModel->workItems()
             ->whereNull('parent_id')
             ->orderBy('sort_order')
             ->get();
 
-        $all = $period->workItems()->orderBy('sort_order')->get()->keyBy('id');
+        $all = $periodModel->workItems()->orderBy('sort_order')->get()->keyBy('id');
 
-        return response()->json(['data' => $this->buildTree($roots, $all)]);
+        $items = $this->buildTree($roots, $all);
+
+        return response()->json([
+            'data' => [
+                'tahap'       => $periodModel->period,
+                'rabInternal' => (float) $periodModel->hpp_plan_total,
+                'items'       => $items,
+            ],
+        ]);
     }
 
     private function buildTree($nodes, $all): array
     {
         return $nodes->map(function (ProjectWorkItem $node) use ($all) {
-            $row = $node->toArray();
             $children = $all->filter(fn($i) => $i->parent_id === $node->id);
-            $row['children'] = $children->isNotEmpty()
-                ? $this->buildTree($children, $all)
-                : [];
-            return $row;
+
+            return [
+                'id'             => $node->id,
+                'name'           => $node->item_name,
+                'item_no'        => $node->item_no,
+                'volume'         => null,   // not in current model, reserved for future
+                'satuan'         => null,
+                'harsatInternal' => null,
+                'totalBiaya'     => (float) $node->total_budget,
+                'realisasi'      => (float) $node->realisasi,
+                'deviasi'        => (float) $node->deviasi,
+                'deviasi_pct'    => (float) $node->deviasi_pct,
+                'is_total_row'   => (bool) $node->is_total_row,
+                'children'       => $children->isNotEmpty()
+                    ? $this->buildTree($children, $all)
+                    : [],
+            ];
         })->values()->toArray();
     }
 }
