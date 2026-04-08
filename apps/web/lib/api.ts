@@ -7,11 +7,82 @@ import type {
   IngestionFileListResponse,
   InsightResponse,
   IngestionLogResponse,
+  ColumnAlias,
+  ColumnAliasListResponse,
+  AliasContext,
+  ProjectPeriodListResponse,
+  ProjectWorkItemListResponse,
+  MaterialLogListResponse,
+  EquipmentLogListResponse,
+  ProgressCurveListResponse,
+  FilterOptionsResponse,
+  SbuDistributionItem,
+  ProjectPhaseListResponse,
+  WorkItemLevel4ListResponse,
+  MaterialLogLevel5ListResponse,
+  RiskListResponse,
+  ProgressCurveResponse,
 } from "@/types/project";
+import { getToken } from "@/lib/auth";
+
+type UploadRequestError = Error & {
+  responseData?: UploadResponse;
+};
+
+function decodeHtmlError(text: string): string {
+  return text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseXhrPayload(xhr: XMLHttpRequest): UploadResponse | null {
+  const raw = xhr.responseText?.trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const contentType = xhr.getResponseHeader("content-type")?.toLowerCase() ?? "";
+
+  if (contentType.includes("application/json")) {
+    return JSON.parse(raw) as UploadResponse;
+  }
+
+  if (raw.startsWith("{") || raw.startsWith("[")) {
+    return JSON.parse(raw) as UploadResponse;
+  }
+
+  return null;
+}
+
+function buildUploadError(xhr: XMLHttpRequest, data: UploadResponse | null): UploadRequestError {
+  const htmlMessage = decodeHtmlError(xhr.responseText ?? "");
+  const message = data?.message
+    ?? htmlMessage
+    ?? "Server mengembalikan response yang bukan JSON.";
+
+  const err: UploadRequestError = new Error(message);
+
+  if (data) {
+    err.responseData = data;
+  }
+
+  return err;
+}
 
 const api = axios.create({
   baseURL: "/api",
   headers: { Accept: "application/json" },
+});
+
+// Attach Bearer token to every request
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
 });
 
 // ============================================================
@@ -20,9 +91,12 @@ const api = axios.create({
 
 export type ProjectFilters = {
   division?: string;
+  sbu?: string;
+  location?: string;
+  partnership?: string;
   status?: string;
   year?: number;
-  sort_by?: "cpi" | "spi" | "contract_value" | "project_name";
+  sort_by?: "cpi" | "spi" | "contract_value" | "project_name" | "gross_profit_pct";
   sort_dir?: "asc" | "desc";
   min_contract?: number;
   max_contract?: number;
@@ -41,24 +115,36 @@ export const projectApi = {
   insight: (id: number): Promise<InsightResponse> =>
     api.get(`/projects/${id}/insight`).then((r) => r.data),
 
-  // projectApi.ts
+  periods: (id: number): Promise<ProjectPhaseListResponse> =>
+    api.get(`/projects/${id}/periods`).then((r) => r.data),
+
+  progressCurve: (id: number): Promise<ProgressCurveResponse> =>
+    api.get(`/projects/${id}/progress-curve`).then((r) => r.data),
+
+  risks: (id: number): Promise<RiskListResponse> =>
+    api.get(`/projects/${id}/risks`).then((r) => r.data),
+
+  filterOptions: (): Promise<FilterOptionsResponse> =>
+    api.get("/projects/filter-options").then((r) => r.data),
+
+  sbuDistribution: (): Promise<{ data: SbuDistributionItem[] }> =>
+    api.get("/projects/sbu-distribution").then((r) => r.data),
+
   upload: (
     files: File | File[],
-    onProgress?: (percent: number) => void, // Callback sederhana untuk progres
+    onProgress?: (percent: number) => void,
   ): Promise<UploadResponse> => {
     return new Promise((resolve, reject) => {
       const form = new FormData();
       const fileArray = Array.isArray(files) ? files : [files];
       fileArray.forEach((file) => form.append("files[]", file));
 
-      const laravelUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
-
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${laravelUrl}/api/projects/upload`);
+      xhr.open("POST", "/api/projects/upload");
       xhr.setRequestHeader("Accept", "application/json");
+      const token = getToken();
+      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
-      // --- LOGIKA PROGRESS ---
       if (onProgress) {
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
@@ -68,24 +154,31 @@ export const projectApi = {
         };
       }
 
-      // --- LOGIKA RESPONSE ---
       xhr.onload = () => {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(data);
-        } else {
-          const err = new Error(data?.message ?? "Upload gagal") as any;
-          err.responseData = data;
-          reject(err);
+        try {
+          const data = parseXhrPayload(xhr);
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (data) {
+              resolve(data);
+              return;
+            }
+
+            reject(buildUploadError(xhr, null));
+            return;
+          }
+
+          reject(buildUploadError(xhr, data));
+        } catch {
+          reject(buildUploadError(xhr, null));
         }
       };
 
       xhr.onerror = () => reject(new Error("Network Error"));
-
       xhr.send(form);
     });
   },
-  // Tambah di dalam projectApi object, di bawah upload yang lama
+
   uploadSingle: (
     file: File,
     onProgress?: (percent: number) => void,
@@ -94,12 +187,11 @@ export const projectApi = {
       const form = new FormData();
       form.append("files[]", file);
 
-      const laravelUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
-
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${laravelUrl}/api/projects/upload`);
+      xhr.open("POST", "/api/projects/upload");
       xhr.setRequestHeader("Accept", "application/json");
+      const token = getToken();
+      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
       if (onProgress) {
         xhr.upload.onprogress = (event) => {
@@ -111,13 +203,22 @@ export const projectApi = {
       }
 
       xhr.onload = () => {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(data);
-        } else {
-          const err = new Error(data?.message ?? "Upload gagal") as any;
-          err.responseData = data;
-          reject(err);
+        try {
+          const data = parseXhrPayload(xhr);
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (data) {
+              resolve(data);
+              return;
+            }
+
+            reject(buildUploadError(xhr, null));
+            return;
+          }
+
+          reject(buildUploadError(xhr, data));
+        } catch {
+          reject(buildUploadError(xhr, null));
         }
       };
 
@@ -129,6 +230,18 @@ export const projectApi = {
   delete: (id: number): Promise<{ message: string }> =>
     api.delete(`/projects/${id}`).then((r) => r.data),
 };
+
+export const periodApi = {
+  workItems: (periodId: number): Promise<WorkItemLevel4ListResponse> =>
+    api.get(`/periods/${periodId}/work-items`).then((r) => r.data),
+
+  materials: (periodId: number): Promise<MaterialLogLevel5ListResponse> =>
+    api.get(`/periods/${periodId}/materials`).then((r) => r.data),
+
+  equipment: (periodId: number): Promise<EquipmentLogListResponse> =>
+    api.get(`/periods/${periodId}/equipment`).then((r) => r.data),
+};
+
 export const ingestionApi = {
   list: (perPage = 15): Promise<IngestionFileListResponse> =>
     api
@@ -144,6 +257,55 @@ export const ingestionApi = {
     api
       .get("/ingestion-log", { params: { per_page: perPage } })
       .then((r) => r.data),
+};
+
+export const authApi = {
+  login: (email: string, password: string) =>
+    api.post("/auth/login", { email, password }).then((r) => r.data),
+
+  register: (name: string, email: string, password: string, password_confirmation: string) =>
+    api.post("/auth/register", { name, email, password, password_confirmation }).then((r) => r.data),
+
+  logout: () =>
+    api.post("/auth/logout").then((r) => r.data),
+
+  me: () =>
+    api.get("/auth/me").then((r) => r.data),
+};
+
+export type ColumnAliasFilters = {
+  context?: AliasContext | "";
+  active_only?: boolean;
+  q?: string;
+};
+
+export type ColumnAliasPayload = {
+  alias: string;
+  target_field: string;
+  context: AliasContext | null;
+  is_active?: boolean;
+};
+
+export const harsatApi = {
+  trend: (): Promise<{ data: { years: string[]; categories: { key: string; label: string }[]; data: Record<string, number[]> } | null }> =>
+    api.get("/harsat/trend").then((r) => r.data),
+};
+
+export const columnAliasApi = {
+  list: (filters: ColumnAliasFilters = {}): Promise<ColumnAliasListResponse> =>
+    api.get("/column-aliases", { params: filters }).then((r) => r.data),
+
+  detail: (id: number): Promise<{ data: ColumnAlias }> =>
+    api.get(`/column-aliases/${id}`).then((r) => r.data),
+
+  create: (payload: ColumnAliasPayload): Promise<{ data: ColumnAlias }> =>
+    api.post("/column-aliases", payload).then((r) => r.data),
+
+  update: (id: number, payload: Partial<ColumnAliasPayload>): Promise<{ data: ColumnAlias }> =>
+    api.patch(`/column-aliases/${id}`, payload).then((r) => r.data),
+
+  remove: (id: number): Promise<{ message: string; data: ColumnAlias }> =>
+    api.delete(`/column-aliases/${id}`).then((r) => r.data),
 };
 
 export default api;

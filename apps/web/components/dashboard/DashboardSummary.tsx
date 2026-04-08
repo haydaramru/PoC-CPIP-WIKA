@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { projectApi } from '@/lib/api';
-import type { SummaryResponse, Project, Division } from '@/types/project';
+import type { SummaryResponse, Project, ParetoItem } from '@/types/project';
 import type { DashboardFilters } from '@/types/project';
 import QuickFilterPreview from '@/components/dashboard/QuickFilterPreview';
 import KpiCards from '@/components/dashboard/KpiCards';
@@ -12,10 +12,6 @@ import SebaranSBUChart from '@/components/dashboard/SebaranSBUChart';
 import ParetoTables from '@/components/dashboard/ParetoTables';
 import RiskProjectTable from '@/components/dashboard/RiskProjectTable';
 import Snackbar from '@/components/ui/Snackbar';
-import mockData from '@/data/mock-data.json';
-
-const MOCK_SUMMARY = mockData.summary as SummaryResponse;
-const MOCK_PROJECTS = mockData.projects as Project[];
 
 export default function DashboardSummary() {
   const [summary,  setSummary]  = useState<SummaryResponse | null>(null);
@@ -36,18 +32,10 @@ export default function DashboardSummary() {
       projectApi.list(),
     ])
       .then(([summaryData, listData]) => {
-        if (summaryData.total_projects > 0) {
-          setSummary(summaryData);
-          setProjects(listData.data);
-        } else {
-          setSummary(MOCK_SUMMARY);
-          setProjects(MOCK_PROJECTS);
-        }
+        setSummary(summaryData);
+        setProjects(listData.data);
       })
-      .catch(() => {
-        setSummary(MOCK_SUMMARY);
-        setProjects(MOCK_PROJECTS);
-      })
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
@@ -101,7 +89,10 @@ export default function DashboardSummary() {
         <SebaranSBUChart />
       </div>
 
-      <ParetoTables />
+      <ParetoTables
+        profitability={summary.profitability ?? []}
+        overrun={summary.overrun ?? []}
+      />
       {searchApplied && <RiskProjectTable projects={filteredProjects} />}
 
       <Snackbar

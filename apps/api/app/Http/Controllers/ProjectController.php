@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ImportValidationException;
 use App\Http\Requests\ProjectRequest;
 use App\Http\Requests\UploadExcelRequest;
-use App\Imports\ProjectImport;
+use App\Services\AdaptiveWorkbookImport;
+use App\Services\ProjectImport;
 use App\Models\IngestionFile;
 use App\Models\Project;
+use App\Services\PolaBImport;
+use App\Services\PolaCImport;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProjectController extends Controller
 {
@@ -18,6 +24,9 @@ class ProjectController extends Controller
         $query = Project::query();
 
         $query->byDivision($request->division);
+        $query->bySbu($request->sbu);
+        $query->byLocation($request->location);
+        $query->byPartnership($request->partnership);
         $query->byContractRange(
             $request->filled('min_contract') ? (float) $request->min_contract : null,
             $request->filled('max_contract') ? (float) $request->max_contract : null,
@@ -27,8 +36,8 @@ class ProjectController extends Controller
         $year = $request->filled('year') ? (int) $request->year : null;
         $query->byYear($year);
 
-        $sortBy  = in_array($request->sort_by, ['cpi', 'spi', 'contract_value', 'project_name'])
-                    ? $request->sort_by : 'cpi';   // default CPI ascending sesuai brief
+        $sortBy  = in_array($request->sort_by, ['cpi', 'spi', 'contract_value', 'project_name', 'gross_profit_pct'])
+                    ? $request->sort_by : 'cpi';
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
         $query->orderBy($sortBy, $sortDir);
 
@@ -61,13 +70,15 @@ class ProjectController extends Controller
 
     public function summary(): JsonResponse
     {
-        $all = Project::all();
+        $total = Project::count();
 
-        if ($all->isEmpty()) {
+        if ($total === 0) {
             return response()->json([
                 'total_projects'   => 0,
                 'avg_cpi'          => 0,
                 'avg_spi'          => 0,
+                'overbudget_count' => 0,
+                'delay_count'      => 0,
                 'overbudget_pct'   => 0,
                 'delay_pct'        => 0,
                 'by_division'      => [],
@@ -75,24 +86,133 @@ class ProjectController extends Controller
             ]);
         }
 
-        $byDivision = $all->groupBy('division')->map(fn($projects) => [
-            'total'            => $projects->count(),
-            'avg_cpi'          => round($projects->avg('cpi'), 4),
-            'avg_spi'          => round($projects->avg('spi'), 4),
-            'overbudget_count' => $projects->filter(fn($p) => $p->cpi < 1)->count(),
-            'delay_count'      => $projects->filter(fn($p) => $p->spi < 1)->count(),
-        ]);
+        $stats = DB::table('projects')
+            ->selectRaw('AVG(cpi) AS avg_cpi')
+            ->selectRaw('AVG(spi) AS avg_spi')
+            ->selectRaw('SUM(CASE WHEN cpi < 1 THEN 1 ELSE 0 END) AS overbudget_count')
+            ->selectRaw('SUM(CASE WHEN spi < 1 THEN 1 ELSE 0 END) AS delay_count')
+            ->first();
+
+        $byDivision = DB::table('projects')
+            ->select('division')
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw('AVG(cpi) AS avg_cpi')
+            ->selectRaw('AVG(spi) AS avg_spi')
+            ->selectRaw('SUM(CASE WHEN cpi < 1 THEN 1 ELSE 0 END) AS overbudget_count')
+            ->selectRaw('SUM(CASE WHEN spi < 1 THEN 1 ELSE 0 END) AS delay_count')
+            ->groupBy('division')
+            ->get()
+            ->keyBy('division')
+            ->map(fn($row) => [
+                'total'            => (int) $row->total,
+                'avg_cpi'          => round((float) $row->avg_cpi, 4),
+                'avg_spi'          => round((float) $row->avg_spi, 4),
+                'overbudget_count' => (int) $row->overbudget_count,
+                'delay_count'      => (int) $row->delay_count,
+            ]);
+
+        $statusBreakdown = DB::table('projects')
+            ->select('status', DB::raw('COUNT(*) AS count'))
+            ->groupBy('status')
+            ->get()
+            ->pluck('count', 'status')
+            ->map(fn($v) => (int) $v);
+
+        $overbudgetCount = (int) $stats->overbudget_count;
+        $delayCount      = (int) $stats->delay_count;
+
+        // Top-10 profitability — use stored gross_profit_pct if set, else calculate from contract/actual
+        $profitability = DB::table('projects')
+            ->select('project_name', 'gross_profit_pct', 'contract_value', 'actual_cost')
+            ->where('contract_value', '>', 0)
+            ->orderByRaw('
+                COALESCE(
+                    gross_profit_pct,
+                    (contract_value - actual_cost) / contract_value * 100
+                ) DESC
+            ')
+            ->limit(10)
+            ->get()
+            ->map(fn($r) => [
+                'name' => $r->project_name,
+                'pct'  => round(
+                    $r->gross_profit_pct !== null
+                        ? (float) $r->gross_profit_pct
+                        : (($r->contract_value - $r->actual_cost) / $r->contract_value * 100),
+                    1
+                ) . '%',
+            ]);
+
+        // Top-10 overrun (highest cost overrun %)
+        $overrun = DB::table('projects')
+            ->select('project_name', 'planned_cost', 'actual_cost')
+            ->where('actual_cost', '>', DB::raw('planned_cost'))
+            ->where('planned_cost', '>', 0)
+            ->orderByRaw('(actual_cost - planned_cost) / planned_cost DESC')
+            ->limit(10)
+            ->get()
+            ->map(fn($r) => [
+                'name' => $r->project_name,
+                'pct'  => round((($r->actual_cost - $r->planned_cost) / $r->planned_cost) * 100, 1) . '%',
+            ]);
 
         return response()->json([
-            'total_projects'   => $all->count(),
-            'avg_cpi'          => round($all->avg('cpi'), 4),
-            'avg_spi'          => round($all->avg('spi'), 4),
-            'overbudget_count' => $all->filter(fn($p) => $p->cpi < 1)->count(),
-            'delay_count'      => $all->filter(fn($p) => $p->spi < 1)->count(),
-            'overbudget_pct'   => round($all->filter(fn($p) => $p->cpi < 1)->count() / $all->count() * 100, 1),
-            'delay_pct'        => round($all->filter(fn($p) => $p->spi < 1)->count() / $all->count() * 100, 1),
+            'total_projects'   => $total,
+            'avg_cpi'          => round((float) $stats->avg_cpi, 4),
+            'avg_spi'          => round((float) $stats->avg_spi, 4),
+            'overbudget_count' => $overbudgetCount,
+            'delay_count'      => $delayCount,
+            'overbudget_pct'   => round($overbudgetCount / $total * 100, 1),
+            'delay_pct'        => round($delayCount      / $total * 100, 1),
             'by_division'      => $byDivision,
-            'status_breakdown' => $all->groupBy('status')->map->count(),
+            'status_breakdown' => $statusBreakdown,
+            'profitability'    => $profitability,
+            'overrun'          => $overrun,
+        ]);
+    }
+
+
+    public function sbuDistribution(): JsonResponse
+    {
+        $rows = DB::table('projects')
+            ->select('sbu', DB::raw('COUNT(*) as value'))
+            ->whereNotNull('sbu')
+            ->where('sbu', '!=', '')
+            ->groupBy('sbu')
+            ->orderByDesc('value')
+            ->get()
+            ->map(fn($r) => [
+                'label' => $r->sbu,
+                'value' => (int) $r->value,
+            ]);
+
+        return response()->json(['data' => $rows]);
+    }
+
+
+    public function filterOptions(): JsonResponse
+    {
+        $pluck = fn(string $col) => Project::distinct()
+            ->whereNotNull($col)
+            ->where($col, '!=', '')
+            ->orderBy($col)
+            ->pluck($col)
+            ->values();
+
+        return response()->json([
+            'division'       => $pluck('division'),
+            'sbu'            => $pluck('sbu'),
+            'owner'          => $pluck('owner'),
+            'contract_type'  => $pluck('contract_type'),
+            'payment_method' => $pluck('payment_method'),
+            'partnership'    => $pluck('partnership'),
+            'funding_source' => $pluck('funding_source'),
+            'location'       => $pluck('location'),
+            'year'           => Project::distinct()
+                ->whereNotNull('project_year')
+                ->orderByDesc('project_year')
+                ->pluck('project_year')
+                ->values(),
         ]);
     }
 
@@ -126,6 +246,10 @@ class ProjectController extends Controller
     {
         $files = $request->file('files') ?? [];
 
+        if ($request->hasFile('file')) {
+            $files[] = $request->file('file');
+        }
+
         if (empty($files)) {
             return response()->json([
                 'success' => false,
@@ -148,7 +272,7 @@ class ProjectController extends Controller
             try {
                 $ingestionFile->markProcessing();
 
-                $importer = new ProjectImport();
+                $importer = $this->resolveImporter($ingestionFile->getAbsolutePath());
                 $result   = $importer->import(
                     $ingestionFile->getAbsolutePath(),
                     $ingestionFile->id,
@@ -161,38 +285,90 @@ class ProjectController extends Controller
                     $result['errors'],
                 );
 
+            } catch (ImportValidationException $e) {
+                $ingestionFile->markFailed($e->getMessage());
+
+                $result = [
+                    'total'                => 0,
+                    'imported'             => 0,
+                    'skipped'              => 0,
+                    'errors'               => [$e->getMessage()],
+                    'unrecognized_columns' => $e->unrecognizedColumns(),
+                    'suggestion'           => $e->suggestion(),
+                ];
             } catch (\RuntimeException $e) {
                 $ingestionFile->markFailed($e->getMessage());
 
                 $result = [
-                    'total'    => 0,
-                    'imported' => 0,
-                    'skipped'  => 0,
-                    'errors'   => [$e->getMessage()],
+                    'total'                => 0,
+                    'imported'             => 0,
+                    'skipped'              => 0,
+                    'errors'               => [$e->getMessage()],
+                    'unrecognized_columns' => [],
+                    'suggestion'           => null,
                 ];
             }
 
+            $unrecognized = $result['unrecognized_columns'] ?? [];
+
             $results[] = [
-                'file_id'       => $ingestionFile->id,
-                'file_name'     => $ingestionFile->original_name,
-                'status'        => $ingestionFile->status,
-                'total_rows'    => $result['total'],
-                'imported'      => $result['imported'],
-                'skipped'       => $result['skipped'],
-                'errors'        => $result['errors'],
+                'file_id'              => $ingestionFile->id,
+                'file_name'            => $ingestionFile->original_name,
+                'status'               => $ingestionFile->status,
+                'total_rows'           => $result['total'],
+                'imported'             => $result['imported'],
+                'skipped'              => $result['skipped'],
+                'errors'               => $result['errors'],
+                'warnings'             => $result['warnings'] ?? [],
+                'scanner'              => $result['scanner'] ?? 'pattern',
+                'unrecognized_columns' => $unrecognized,
+                'suggestion'           => $result['suggestion'] ?? null,
+                'field_trace'          => $result['field_trace'] ?? [],
+                'field_candidates'     => $result['field_candidates'] ?? [],
+                'field_conflicts'      => $result['field_conflicts'] ?? [],
+                'project_row_trace'    => $result['project_row_trace'] ?? [],
+                'project_row_conflicts'=> $result['project_row_conflicts'] ?? [],
             ];
         }
 
         $allSuccess = collect($results)->every(fn($r) => $r['status'] === 'success');
         $anySuccess = collect($results)->contains(fn($r) => in_array($r['status'], ['success', 'partial']));
         $httpStatus = $anySuccess ? 200 : 422;
+        $firstResult = $results[0] ?? null;
+        $singleFile = count($results) === 1;
+        $totalRows = (int) collect($results)->sum('total_rows');
+        $imported = (int) collect($results)->sum('imported');
+        $skipped = (int) collect($results)->sum('skipped');
+        $errors = collect($results)
+            ->pluck('errors')
+            ->flatten()
+            ->values()
+            ->all();
+        $warnings = collect($results)
+            ->pluck('warnings')
+            ->flatten()
+            ->values()
+            ->all();
 
         return response()->json([
             'success' => $anySuccess,
             'message' => $allSuccess
                 ? 'Semua file berhasil diimport.'
                 : ($anySuccess ? 'Sebagian file berhasil diimport.' : 'Semua file gagal diimport.'),
+            'total_rows' => $totalRows,
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'errors' => $errors,
+            'warnings' => $warnings,
             'results' => $results,
+            'scanner'              => $singleFile ? ($firstResult['scanner'] ?? 'pattern') : 'mixed',
+            'unrecognized_columns' => $singleFile ? ($firstResult['unrecognized_columns'] ?? []) : [],
+            'suggestion'           => $singleFile ? ($firstResult['suggestion'] ?? null) : null,
+            'field_trace'          => $singleFile ? ($firstResult['field_trace'] ?? []) : [],
+            'field_candidates'     => $singleFile ? ($firstResult['field_candidates'] ?? []) : [],
+            'field_conflicts'      => $singleFile ? ($firstResult['field_conflicts'] ?? []) : [],
+            'project_row_trace'    => $singleFile ? ($firstResult['project_row_trace'] ?? []) : [],
+            'project_row_conflicts'=> $singleFile ? ($firstResult['project_row_conflicts'] ?? []) : [],
         ], $httpStatus);
     }
 
@@ -226,7 +402,7 @@ class ProjectController extends Controller
         $ingestionFile->markProcessing();
 
         try {
-            $importer = new ProjectImport();
+            $importer = $this->resolveImporter($ingestionFile->getAbsolutePath());
             $result   = $importer->import(
                 $ingestionFile->getAbsolutePath(),
                 $ingestionFile->id,
@@ -239,6 +415,15 @@ class ProjectController extends Controller
                 $result['errors'],
             );
 
+        } catch (ImportValidationException $e) {
+            $ingestionFile->markFailed($e->getMessage());
+
+            return response()->json([
+                'success'              => false,
+                'message'              => $e->getMessage(),
+                'unrecognized_columns' => $e->unrecognizedColumns(),
+                'suggestion'           => $e->suggestion(),
+            ], 422);
         } catch (\RuntimeException $e) {
             $ingestionFile->markFailed($e->getMessage());
 
@@ -253,9 +438,16 @@ class ProjectController extends Controller
             'message'   => "Reprocess selesai. {$ingestionFile->imported_rows} berhasil, {$ingestionFile->skipped_rows} dilewati.",
             'file_id'   => $ingestionFile->id,
             'status'    => $ingestionFile->status,
+            'scanner'   => $result['scanner'] ?? 'pattern',
             'imported'  => $ingestionFile->imported_rows,
             'skipped'   => $ingestionFile->skipped_rows,
             'errors'    => $ingestionFile->errors,
+            'warnings'  => $result['warnings'] ?? [],
+            'field_trace'       => $result['field_trace'] ?? [],
+            'field_candidates'  => $result['field_candidates'] ?? [],
+            'field_conflicts'   => $result['field_conflicts'] ?? [],
+            'project_row_trace' => $result['project_row_trace'] ?? [],
+            'project_row_conflicts' => $result['project_row_conflicts'] ?? [],
         ]);
     }
 
@@ -273,16 +465,22 @@ class ProjectController extends Controller
         $bullets = [];
 
         if ($cpi >= 1) {
+            $savingsPct = $plannedCost > 0
+                ? abs(($actualCost - $plannedCost) / $plannedCost * 100)
+                : 0;
             $bullets[] = [
                 'level' => 'info',
-                'text'  => "Positive cost performance: CPI {$cpi} indicates the project is under budget and cost-efficient.",
+                'text'  => sprintf(
+                    'Positive cost performance: CPI %.4f indicates the project is %.1f%% under budget.',
+                    $cpi, $savingsPct
+                ),
             ];
         } else {
             $bullets[] = [
                 'level' => $cpi < 0.9 ? 'critical' : 'warning',
                 'text'  => sprintf(
-                    'Cost overrun detected: CPI %.2f indicates the project is %.1f%% over planned budget.',
-                    $cpi, abs($overrunPct)
+                    'Cost overrun detected: CPI %.4f indicates the project is %.1f%% over planned budget.',
+                    $cpi, $overrunPct
                 ),
             ];
         }
@@ -360,5 +558,55 @@ class ProjectController extends Controller
                 'text'  => $summaryText,
             ],
         ]);
+    }
+
+    /**
+     * Auto-detect file pattern and return appropriate importer.
+     *
+     * Pola A — flat tabular 1 sheet     → ProjectImport (existing)
+     * Pola B — mixed layout 1 sheet     → PolaBImport
+     * Pola C — multi-sheet (>1 sheet)   → PolaCImport
+     */
+    private function resolveImporter(string $filePath): object
+    {
+        $adaptiveImporter = new AdaptiveWorkbookImport();
+
+        if ($adaptiveImporter->supports($filePath)) {
+            return $adaptiveImporter;
+        }
+
+        $spreadsheet = IOFactory::load($filePath);
+        $sheetCount  = $spreadsheet->getSheetCount();
+
+        // Pola C: more than 1 sheet
+        if ($sheetCount > 1) {
+            return new PolaCImport();
+        }
+
+        // Pola B: single sheet with mixed zones (detect HPP + vendor sections)
+        $raw = $spreadsheet->getActiveSheet()->toArray(null, true, true, false);
+
+        $hasHppHeader = false;
+        $hasVendorHeader = false;
+
+        foreach ($raw as $row) {
+            $cells = array_map(fn($c) => strtolower(trim((string) $c)), $row);
+            $rowStr = implode(' ', $cells);
+
+            if (!$hasHppHeader && str_contains($rowStr, 'budget') && str_contains($rowStr, 'realisasi')) {
+                $hasHppHeader = true;
+            }
+            if (!$hasVendorHeader && (str_contains($rowStr, 'vendor') || str_contains($rowStr, 'supplier'))
+                && str_contains($rowStr, 'material')) {
+                $hasVendorHeader = true;
+            }
+        }
+
+        if ($hasHppHeader || $hasVendorHeader) {
+            return new PolaBImport();
+        }
+
+        // Pola A: default flat tabular
+        return new ProjectImport();
     }
 }

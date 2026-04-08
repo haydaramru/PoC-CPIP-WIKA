@@ -1,10 +1,11 @@
 // app/layout.tsx
 import './globals.css';
 import { SidebarProvider } from '@/components/layout/SidebarContext';
+import AuthGuard from '@/components/auth/AuthGuard';
 import LayoutShell from '@/components/layout/LayoutShell';
 
 export const metadata = {
-  title: 'Project Performance Dashboard',
+  title: "Project Performance Dashboard – CPIP",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen bg-white">
         <SidebarProvider>
-          <LayoutShell>{children}</LayoutShell>
+          <AuthGuard>
+            <LayoutShell>{children}</LayoutShell>
+          </AuthGuard>
         </SidebarProvider>
       </body>
     </html>

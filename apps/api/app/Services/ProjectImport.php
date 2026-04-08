@@ -1,53 +1,81 @@
 <?php
 
-namespace App\Imports;
+namespace App\Services;
 
+use App\Enums\Division;
+use App\Exceptions\ImportValidationException;
+use App\Models\ColumnAlias;
 use App\Models\Project;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class ProjectImport
 {
+    // Only these two are strictly required to identify a project.
+    // Financial/operational fields are optional — KPI will be null when unavailable.
     private const REQUIRED_COLUMNS = [
         'project_code',
         'project_name',
-        'division',
-        'contract_value',
-        'planned_cost',
-        'actual_cost',
-        'project_year',
-        'planned_duration',
-        'actual_duration',
     ];
 
-    private array $errors   = [];
-    private int   $imported = 0;
-    private int   $skipped  = 0;
+    private WorkbookFieldMapper $mapper;
 
-    public function import(string $filePath): array
+    private array $errors       = [];
+    private array $unrecognized = [];
+    private int   $imported     = 0;
+    private int   $skipped      = 0;
+    private int   $total        = 0;
+
+    public function __construct()
     {
+        $this->mapper = new WorkbookFieldMapper();
+    }
+
+    public function import(string $filePath, ?int $ingestionFileId = null): array
+    {
+        $this->errors       = [];
+        $this->unrecognized = [];
+        $this->imported     = 0;
+        $this->skipped      = 0;
+        $this->total        = 0;
+
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
         $sheet       = $spreadsheet->getActiveSheet();
-        $rows        = $sheet->toArray(null, true, true, false); // indexed from 0
+        $raw         = $sheet->toArray(null, true, true, false);
 
-        if (empty($rows)) {
+        if (empty($raw)) {
             throw new \RuntimeException('File Excel kosong.');
         }
 
-        $headers = $this->normalizeHeaders($rows[0]);
-        $this->validateHeaders($headers);
+        // ── Auto-detect & normalize layout ────────────────────────────────────
+        $rows = $this->isTransposed($raw) ? $this->transpose($raw) : $raw;
 
+        // ── Header processing ─────────────────────────────────────────────────
+        // resolveHeaders normalizes + applies builtin aliases + DB aliases in one pass
+        $headers    = $this->mapper->resolveHeaders($rows[0], 'project');
+        $rawHeaders = array_map(fn($h) => $this->mapper->normalizeHeader((string) $h), $rows[0]);
+
+        $this->unrecognized = $this->mapper->findUnrecognized($rows[0], $headers, 'project');
+        $this->validateHeaders($headers, $rawHeaders);
+
+        // ── Data rows ─────────────────────────────────────────────────────────
         $dataRows = array_slice($rows, 1);
 
         foreach ($dataRows as $rowIndex => $row) {
-            $lineNumber = $rowIndex + 2; // +2 karena header di baris 1
+            $lineNumber = $rowIndex + 2;
 
-            if ($this->isEmptyRow($row)) continue;
+            if ($this->mapper->isEmptyRow($row)) continue;
+
+            $this->total++;
 
             $data = array_combine($headers, $row);
 
-            $validator = $this->makeValidator($data, $lineNumber);
+            // Normalize division casing if present
+            if (!empty($data['division'])) {
+                $data['division'] = ucwords(strtolower(trim((string) $data['division'])));
+            }
+
+            $validator = $this->makeValidator($data);
 
             if ($validator->fails()) {
                 foreach ($validator->errors()->all() as $error) {
@@ -57,18 +85,23 @@ class ProjectImport
                 continue;
             }
 
+            $numeric = fn($key) => isset($data[$key]) && $data[$key] !== '' ? (float) $data[$key] : null;
+            $integer = fn($key) => isset($data[$key]) && $data[$key] !== '' ? (int)   $data[$key] : null;
+
             Project::updateOrCreate(
                 ['project_code' => trim($data['project_code'])],
                 [
-                    'project_name'     => trim($data['project_name']),
-                    'division'         => trim($data['division']),
-                    'owner'            => isset($data['owner']) ? trim($data['owner']) : null,
-                    'contract_value'   => (float) $data['contract_value'],
-                    'planned_cost'     => (float) $data['planned_cost'],
-                    'actual_cost'      => (float) $data['actual_cost'],
-                    'planned_duration' => (int)   $data['planned_duration'],
-                    'actual_duration'  => (int)   $data['actual_duration'],
-                    'progress_pct'     => isset($data['progress_pct']) ? (float) $data['progress_pct'] : 100,
+                    'ingestion_file_id' => $ingestionFileId,
+                    'project_name'      => trim($data['project_name']),
+                    'division'          => !empty($data['division']) ? trim($data['division']) : null,
+                    'owner'             => !empty($data['owner'])    ? trim($data['owner'])    : null,
+                    'contract_value'    => $numeric('contract_value'),
+                    'planned_cost'      => $numeric('planned_cost'),
+                    'actual_cost'       => $numeric('actual_cost'),
+                    'planned_duration'  => $integer('planned_duration'),
+                    'actual_duration'   => $integer('actual_duration'),
+                    'progress_pct'      => $numeric('progress_pct') ?? 100.0,
+                    'project_year'      => $integer('project_year') ?? now()->year,
                 ]
             );
 
@@ -76,51 +109,92 @@ class ProjectImport
         }
 
         return [
-            'imported' => $this->imported,
-            'skipped'  => $this->skipped,
-            'errors'   => $this->errors,
+            'total'                => $this->total,
+            'imported'             => $this->imported,
+            'skipped'              => $this->skipped,
+            'errors'               => $this->errors,
+            'unrecognized_columns' => $this->unrecognized,
         ];
     }
 
-    
-    private function normalizeHeaders(array $rawHeaders): array
+    private function isTransposed(array $raw): bool
     {
-        return array_map(fn($h) => strtolower(trim((string) $h)), $rawHeaders);
+        $colA = array_map(fn($row) => $row[0] ?? null, $raw);
+        $colA = array_filter($colA, fn($v) => $v !== null && $v !== '');
+
+        if (empty($colA)) return false;
+
+        $normalized = array_map(
+            fn($v) => $this->mapper->resolveAlias((string) $v, 'project')
+                   ?? $this->mapper->normalizeHeader((string) $v),
+            $colA
+        );
+
+        $matches = count(array_intersect($normalized, self::REQUIRED_COLUMNS));
+
+        return $matches >= (count(self::REQUIRED_COLUMNS) * 0.5);
     }
 
-   
-    private function validateHeaders(array $headers): void
+    private function transpose(array $raw): array
+    {
+        if (empty($raw)) return [];
+
+        $colCount = max(array_map('count', $raw));
+        $padded   = array_map(
+            fn($row) => array_pad(array_values($row), $colCount, null),
+            $raw
+        );
+
+        $result = [];
+        for ($col = 0; $col < $colCount; $col++) {
+            $result[] = array_map(fn($row) => $row[$col], $padded);
+        }
+
+        return $result;
+    }
+
+    private function validateHeaders(array $headers, array $rawHeaders): void
     {
         $missing = array_diff(self::REQUIRED_COLUMNS, $headers);
 
         if (!empty($missing)) {
-            throw new \RuntimeException(
-                'Kolom wajib tidak ditemukan di Excel: ' . implode(', ', $missing) . '. ' .
-                'Pastikan baris pertama adalah header dengan nama kolom yang benar.'
+            $relevantUnrecognized = array_values(array_intersect(
+                $this->unrecognized,
+                array_filter($rawHeaders)
+            ));
+
+            if (!empty($relevantUnrecognized)) {
+                throw new ImportValidationException(
+                    count($relevantUnrecognized) . ' kolom wajib tidak dikenali',
+                    $relevantUnrecognized,
+                    'Tambahkan alias di halaman Column Mapping'
+                );
+            }
+
+            throw new ImportValidationException(
+                'Kolom wajib tidak ditemukan: ' . implode(', ', $missing) . '. ' .
+                'Header yang terbaca: ' . implode(', ', array_filter($headers)) . '. ' .
+                'Pastikan nama kolom sesuai atau lihat format yang didukung.'
             );
         }
     }
 
-    private function isEmptyRow(array $row): bool
-    {
-        return empty(array_filter($row, fn($cell) => $cell !== null && $cell !== ''));
-    }
-
-   
-    private function makeValidator(array $data, int $lineNumber): \Illuminate\Validation\Validator
+    private function makeValidator(array $data): \Illuminate\Validation\Validator
     {
         return Validator::make($data, [
             'project_code'     => 'required|string|max:20',
             'project_name'     => 'required|string|max:255',
-            'division'         => 'required|in:Infrastructure,Building',
-            'contract_value'   => 'required|numeric|min:0',
-            'planned_cost'     => 'required|numeric|min:0',
-            'actual_cost'      => 'required|numeric|min:0',
-            'planned_duration' => 'required|integer|min:1',
-            'actual_duration'  => 'required|integer|min:1',
+            'division'         => ['nullable', Rule::enum(Division::class)],
+            'contract_value'   => 'nullable|numeric|min:0',
+            'planned_cost'     => 'nullable|numeric|min:0',
+            'actual_cost'      => 'nullable|numeric|min:0',
+            'planned_duration' => 'nullable|integer|min:1',
+            'actual_duration'  => 'nullable|integer|min:1',
             'progress_pct'     => 'nullable|numeric|min:0|max:100',
+            'project_year'     => 'nullable|integer|min:2000|max:2099',
         ], [
-            'division.in' => 'Division harus Infrastructure atau Building.',
+            'division.enum'        => 'Division harus ' . implode(' atau ', Division::values()) . '.',
+            'project_year.integer' => 'Project year harus berupa angka.',
         ]);
     }
 }
