@@ -9,6 +9,7 @@ use App\Http\Controllers\ProgressCurveController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectPeriodController;
 use App\Http\Controllers\ProjectRiskController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\WorkItemController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,13 @@ Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me',      [AuthController::class, 'me']);
     });
+});
+
+// ── Roles ──────────────────────────────────────────────────────────────────────
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/roles', [RoleController::class, 'index']);
+    Route::get('/users/{user}/role', [RoleController::class, 'getUserRole']);
+    Route::patch('/users/{user}/role', [RoleController::class, 'assignRole']);
 });
 
 // ── Read-only (public for PoC) ─────────────────────────────────────────────────
