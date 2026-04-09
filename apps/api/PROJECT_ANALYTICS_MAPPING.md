@@ -45,29 +45,21 @@
 **Columns Used:**
 ```php
 // For filter options
-- project_name     // Project Name
-- partner_name     // Google, or anything
-- sbu              // Gedung RS, Jembatan, etc.
-- owner            // Pemerintah, Swasta, BUMN, Danantara
-- contract_type    // Unit Price, Lumpsum, Gabungan (Tipe Kontrak)
-- type_of_contract // Konvensional, Design & Build, EPCC (Jenis Kontrak)
-- payment_method   // Monthly Progress, Milestone, CPF
-- partnership      // JO, Non JO
-- funding_source   // APBN, APBD, Swasta, Loan
-- location         // Project location
-- project_year     // Year filter
-- division         // Infrastructure, Building
+- project_name     // For Project Name
+- profit_center    // For Profit Center Code / Internal SPK Code
+- owner            // For Project Owner (Name & Category)
+- funding_source   // For Funding Source
+- type_of_contract // For Contract Method
+- contract_type    // For Contract Pricing Type
+- sbu              // For SBU Project
+- payment_method   // For Payment Method
+- planned_duration // For Project Duration
+- consultant_name  // For Project Consultant
+- location         // For Location
+- partnership      // For Partnership type (JO, Non JO)
+- partner_name     // For Partnership name
 
-// For display in results
-- id               // Project ID for navigation
-- project_code     // Unique code
-- project_name     // Project name
-- owner            // Client/owner
-- sbu              // Strategic Business Unit
-- gross_profit_pct // Profitability percentage
-- cpi              // Cost Performance Index (calculated)
-- spi              // Schedule Performance Index (calculated)
-- status           // good, warning, critical (calculated)
+- division         // soon
 ```
 
 ---
@@ -82,14 +74,11 @@
 
 **Columns Used:**
 ```php
-// Same as Level 1, but with filtered results
-- All columns from Level 1
-
-// Additional display columns
-- contract_value   // Contract value in Million
-- actual_cost      // Actual cost incurred
-- planned_duration // Planned duration in months
-- actual_duration  // Actual duration in months
+- project_name     // For Project Name
+- contrat_value    // For Unit Rate (m²/km)
+- gross_profit_pct // For Gross Profit
+- spi              // For SPI
+- cpi              // For CPI
 ```
 
 ---
@@ -103,6 +92,8 @@
 - `GET /api/projects/{id}/periods`
 
 **Primary Tables:** `projects`, `project_periods`
+
+**project_periods is a child table from projects table!**
 
 **Columns Used - projects:**
 ```php
@@ -129,6 +120,8 @@
 
 **Primary Tables:** `project_periods`, `project_work_items`
 
+**project_work_items is a child table from project_periods table!**
+
 **Columns Used - project_periods:**
 ```php
 - id               // tahapId
@@ -146,12 +139,6 @@
 - total_budget     // Display total biaya
 ```
 
-**Display Data:**
-- Hierarchical work breakdown structure
-- Total Biaya vs Realisasi comparison
-- Deviasi (%) per item
-- Action button to navigate to Level 5
-
 ---
 
 ### Level 5: Data Monitoring Kontrak Vendor
@@ -161,6 +148,8 @@
 **API Endpoint:** `GET /api/periods/{tahapId}/materials`
 
 **Primary Tables:** `project_periods`, `project_work_items`, `project_material_logs`
+
+**project_material_logs is a child table from project_work_items!**
 
 **Columns Used - project_periods:**
 ```php
@@ -173,8 +162,7 @@
 ```php
 - id               // itemId
 - item_name        // Item name display
-- total_budget     // Budget display
-- realisasi        // Realization display
+- total_budget     // Budget display (if needed)
 ```
 
 **Columns Used - project_material_logs:**
@@ -182,26 +170,21 @@
 - id               // Log ID
 - period_id        // FK to project_periods
 - work_item_id     // FK to project_work_items (optional)
-- supplier_name    // "Nama Vendor"
-- tahun_perolehan  // Year of acquisition
-- lokasi_vendor    // Vendor location
-- rating_performa  // Performance rating (e.g., "5/5")
-- material_type    // Material description
-- qty              // Quantity
-- satuan           // Unit (m3, kg, ton, etc.)
-- harga_satuan     // Unit price (IDR)
-- total_tagihan    // Total billing amount
-- realisasi_pengiriman // Delivery realization (e.g., "100% (Selesai)")
-- deviasi_harga_market // Market price deviation (e.g., "+2%")
-- catatan_monitoring  // Monitoring notes
-- is_discount      // Flag for discount rows
+- supplier_name    // For Nama Vendor
+- tahun_perolehan  // For Tahun Perolehan
+- lokasi_vendor    // For Lokasi Vendor
+- rating_performa  // For Rating Performa
+- harga_satuan     // For Harga Satuan Vendor
+- realisasi_pengiriman // For Realisasi Pengiriman
+- deviasi_harga_market // For Deviasi Harga Market
+- catatan_monitoring  // For Catatan Monitoring
+- material_type    // For Material description (if needed)
+- qty              // For Quantity (if needed)
+- satuan           // For Unit (if needed) 
+- total_tagihan    // For Total billing amount (if needed)
+- is_discount      // For Flag for discount rows (if needed)
 ```
 
-**Display Data:**
-- Vendor Information (Nama, Tahun, Lokasi, Rating)
-- Contract Details (Nilai Kontrak, Harga Satuan, Realisasi)
-- Deviasi Harga Market
-- Action buttons: "Cek HPP Level" (to Level 6), "Cek Risk & Timeline" (to Level 7A/7B)
 
 ---
 
