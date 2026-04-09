@@ -37,7 +37,7 @@ class CompleteProjectSeeder extends Seeder
                 'division'             => 'Infrastructure',
                 'sbu'                  => 'Jembatan',
                 'owner'                => 'Pemerintah',
-                'profit_center_code'   => 'PC-2024-037',
+                'profit_center'        => 'Building Construction Division',
                 'type_of_contract'     => 'Design & Build',  // Jenis Kontrak
                 'contract_type'        => 'Lumpsum',         // Tipe Kontrak
                 'payment_method'       => 'Monthly Progress', // Cara Pembayaran

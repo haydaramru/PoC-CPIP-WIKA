@@ -14,7 +14,7 @@
 | # | Filter Name | DB Table | DB Column | Type | Values/Example |
 |---|-------------|----------|-----------|------|----------------|
 | 1 | Nama Proyek | `projects` | `project_name` | varchar(255) | Free text search |
-| 2 | Kode Profit Center/SPK Intern | `projects` | `profit_center_code` | varchar(50) | PC-2024-037 |
+| 2 | Profit Center | `projects` | `profit_center` | varchar(255) | Building Construction Division, Infrastructure Division |
 | 3 | Owner | `projects` | `owner` | varchar(100) | Pemerintah, Swasta, BUMN, Danantara |
 | 4 | Sumber Dana | `projects` | `funding_source` | varchar(100) | APBN, APBD, Swasta, Loan |
 | 5 | Jenis Kontrak | `projects` | `type_of_contract` | varchar(100) | Konvensional, Design and Build, EPCC |
