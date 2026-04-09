@@ -164,11 +164,10 @@ export default function ProjectsPage() {
               <tr className="bg-[#F9FAFB] border-b border-gray-100">
                 <th className="px-6 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider w-12">#</th>
                 <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Project Name</th>
-                <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">SBU</th>
-                <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Owner</th>
-                <th className="px-4 py-4 text-right text-[12px] font-bold text-gray-500 uppercase tracking-wider">Gross Profit</th>
-                <th className="px-4 py-4 text-right text-[12px] font-bold text-gray-500 uppercase tracking-wider">SPI</th>
-                <th className="px-4 py-4 text-right text-[12px] font-bold text-gray-500 uppercase tracking-wider">CPI</th>
+                <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Unit Rate (m²/km)</th>
+                <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Gross Profit</th>
+                <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">SPI</th>
+                <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">CPI</th>
                 <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
@@ -177,17 +176,25 @@ export default function ProjectsPage() {
                 <tr key={project.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4 text-[14px] text-gray-600 font-medium">{idx + 1}</td>
                   <td className="px-4 py-4 text-[14px] font-semibold text-[#1B1C1F]">{project.project_name}</td>
-                  <td className="px-4 py-4 text-[14px] text-gray-600">{project.sbu ?? "-"}</td>
-                  <td className="px-4 py-4 text-[14px] text-gray-600">{project.owner ?? "-"}</td>
-                  <td className="px-4 py-4 text-[14px] text-gray-700 text-right">
-                    {project.gross_profit_pct ? `${project.gross_profit_pct}%` : "-"}
+
+                  <td className="px-4 py-4 text-[14px] text-gray-600">
+                    {project.contract_value ? `Rp${Number(project.contract_value).toLocaleString("id-ID")}` : "-"}
                   </td>
-                  <td className={`px-4 py-4 text-[14px] font-bold text-right ${kpiColor(String(project.spi))}`}>{formatKpi(String(project.spi))}</td>
-                  <td className={`px-4 py-4 text-[14px] font-bold text-right ${kpiColor(String(project.cpi))}`}>{formatKpi(String(project.cpi))}</td>
+
+                  <td className="px-4 py-4 text-[14px] text-gray-700">{project.gross_profit_pct ? `${project.gross_profit_pct}%` : "-"}</td>
+
+                  <td className={`px-4 py-4 text-[14px] font-bold ${kpiColor(String(project.spi))}`}>
+                    {project.spi ? Number(project.spi).toFixed(2) : "-"}
+                  </td>
+
+                  <td className={`px-4 py-4 text-[14px] font-bold ${kpiColor(String(project.cpi))}`}>
+                    {project.cpi ? Number(project.cpi).toFixed(2) : "-"}
+                  </td>
+
                   <td className="px-4 py-4">
                     <button
                       onClick={() => router.push(`/projects/${project.id}`)}
-                      className="flex items-center gap-1 text-primary-blue text-[13px] font-medium hover:underline"
+                      className="flex items-center gap-1 text-[#21409A] text-[13px] font-medium hover:underline"
                     >
                       Details <ArrowSquareOutIcon size={14} />
                     </button>
