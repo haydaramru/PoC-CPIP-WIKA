@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProjectWbs;
+use App\Models\ProjectWorkItem;
 use Illuminate\Http\JsonResponse;
 
 class MaterialLogController extends Controller
@@ -17,11 +18,50 @@ class MaterialLogController extends Controller
             ->orderBy('id')
             ->get();
 
-        $mapped = $logs->map(fn($log) => [
+        $mapped = $logs->map(fn($log) => $this->mapMaterialLog($log));
+
+        return response()->json([
+            'data' => $mapped,
+            'meta' => [
+                'total_tagihan' => $logs->sum(fn($l) => (float) $l->total_tagihan),
+                'total_rows'    => $logs->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Level 5 — material/vendor logs for a specific work item.
+     * Returns materials linked to the specific work item (work_item_id).
+     */
+    public function showByWorkItem(ProjectWorkItem $workItem): JsonResponse
+    {
+        $logs = $workItem->materialLogs()
+            ->where('is_discount', false)
+            ->orderBy('id')
+            ->get();
+
+        $mapped = $logs->map(fn($log) => $this->mapMaterialLog($log));
+
+        return response()->json([
+            'data' => $mapped,
+            'meta' => [
+                'total_tagihan' => $logs->sum(fn($l) => (float) $l->total_tagihan),
+                'total_rows'    => $logs->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Map a material log to the frontend format.
+     */
+    private function mapMaterialLog($log): array
+    {
+        return [
             'id'            => $log->id,
             'material_type' => $log->material_type,
             'volume'        => (float) $log->qty,
             'satuan'        => $log->satuan,
+            'work_item_id'  => $log->work_item_id,
             'vendor'        => [
                 'nama'            => $log->supplier_name,
                 'tahunPerolehan'  => $log->tahun_perolehan,
@@ -39,14 +79,6 @@ class MaterialLogController extends Controller
                 'deviasiHargaMarket'   => $log->deviasi_harga_market,
             ],
             'catatanMonitoring' => $log->catatan_monitoring,
-        ]);
-
-        return response()->json([
-            'data' => $mapped,
-            'meta' => [
-                'total_tagihan' => $logs->sum(fn($l) => (float) $l->total_tagihan),
-                'total_rows'    => $logs->count(),
-            ],
-        ]);
+        ];
     }
 }

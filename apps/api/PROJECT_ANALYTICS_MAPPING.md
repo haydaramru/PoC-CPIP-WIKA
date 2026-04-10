@@ -104,10 +104,9 @@
 ```php
 - id                    // WBS Phase ID for navigation (wbsModel / tahapId)
 - project_id            // FK to projects
-- name_of_work_phase    // WBS Phase name (e.g., "PEKERJAAN PONDASI", "PEKERJAAN STRUKTUR")
+- name_of_work_phase    // as Nama Tahap Pekerjaan [WBS Phase name (e.g., "PEKERJAAN PONDASI", "PEKERJAAN STRUKTUR")]
 - total_pagu            // as BQ External
 - hpp_plan_total        // as RAB Internal
-- hpp_deviation         // as Deviasi
 - deviasi_pct           // as Deviasi %
 ```
 
@@ -146,7 +145,10 @@
 
 **Frontend Route:** `/projects/[id]/[tahapId]/[itemId]`
 
-**API Endpoint:** `GET /api/wbs-phases/{tahapId}/materials`
+**API Endpoint:** `GET /api/work-items/{workItem}/materials`
+
+> **⚠️ IMPORTANT:** This endpoint returns ONLY materials where `work_item_id` = {workItem}.
+> Use `GET /api/wbs-phases/{tahapId}/materials` to get ALL materials for the WBS phase (not filtered).
 
 **Primary Tables:** `project_wbs`, `project_work_items`, `project_material_logs`
 
@@ -161,7 +163,7 @@
 
 **Columns Used - project_work_items:**
 ```php
-- id               // itemId
+- id               // itemId (used as workItem parameter)
 - item_name        // Item name display
 - total_budget     // Budget display (if needed)
 ```
@@ -170,7 +172,7 @@
 ```php
 - id               // Log ID
 - period_id        // FK to project_wbs
-- work_item_id     // FK to project_work_items (optional)
+- work_item_id     // FK to project_work_items (FILTERED by this)
 - supplier_name    // For Nama Vendor
 - tahun_perolehan  // For Tahun Perolehan
 - lokasi_vendor    // For Lokasi Vendor
@@ -181,9 +183,9 @@
 - catatan_monitoring  // For Catatan Monitoring
 - material_type    // For Material description (if needed)
 - qty              // For Quantity (if needed)
-- satuan           // For Unit (if needed) 
+- satuan           // For Unit (if needed)
 - total_tagihan    // For Total billing amount (if needed)
-- is_discount      // For Flag for discount rows (if needed)
+- is_discount      // For Flag for discount rows (excluded from response) (if needed)
 ```
 
 
@@ -522,11 +524,19 @@ GET    /api/projects/filter-options - Filter dropdown options
 
 ### WBS Phase Endpoints (UPDATED)
 ```
-GET    /api/projects/{project}/wbs-phases              - List WBS phases for a project (NEW)
-GET    /api/projects/{project}/wbs-phases/{wbsModel}     - Single WBS phase detail (NEW)
-GET    /api/wbs-phases/{wbsModel}/work-items           - Work items for WBS phase (NEW)
-GET    /api/wbs-phases/{wbsModel}/materials            - Materials for WBS phase (NEW)
-GET    /api/wbs-phases/{wbsModel}/equipment            - Equipment for WBS phase (NEW)
+GET    /api/projects/{project}/wbs-phases              - List WBS phases for a project
+GET    /api/projects/{project}/wbs-phases/{wbsModel}     - Single WBS phase detail
+
+# Work items
+GET    /api/wbs-phases/{wbsModel}/work-items           - ALL work items for WBS phase
+
+# Materials (IMPORTANT: Two different endpoints)
+GET    /api/wbs-phases/{wbsModel}/materials            - ALL materials for WBS phase (not filtered by work item)
+GET    /api/work-items/{workItem}/materials            - Materials filtered by SPECIFIC work item only
+
+# Equipment (IMPORTANT: Two different endpoints)
+GET    /api/wbs-phases/{wbsModel}/equipment            - ALL equipment for WBS phase (not filtered by work item)
+GET    /api/work-items/{workItem}/equipment            - Equipment filtered by SPECIFIC work item only
 ```
 
 ### Deprecated Endpoints
@@ -534,8 +544,8 @@ GET    /api/wbs-phases/{wbsModel}/equipment            - Equipment for WBS phase
 GET    /api/projects/{project}/periods               - USE /wbs-phases INSTEAD
 GET    /api/projects/{project}/periods/{periodModel}  - USE /wbs-phases/{wbsModel} INSTEAD
 GET    /api/periods/{periodModel}/work-items         - USE /wbs-phases/{wbsModel}/work-items INSTEAD
-GET    /api/periods/{periodModel}/materials          - USE /wbs-phases/{wbsModel}/materials INSTEAD
-GET    /api/periods/{periodModel}/equipment          - USE /wbs-phases/{wbsModel}/equipment INSTEAD
+GET    /api/periods/{periodModel}/materials          - USE /work-items/{workItem}/materials INSTEAD (for filtered) or /wbs-phases/{wbsModel}/materials (for all)
+GET    /api/periods/{periodModel}/equipment          - USE /work-items/{workItem}/equipment INSTEAD (for filtered) or /wbs-phases/{wbsModel}/equipment (for all)
 ```
 
 ---
@@ -572,6 +582,7 @@ GET    /api/periods/{periodModel}/equipment          - USE /wbs-phases/{wbsModel
 | 2024-04-08 | 1.3 | Added `volume`, `satuan`, `harsat_internal` to project_work_items (Level 4) |
 | 2024-04-08 | 1.4 | Added ERD (Entity Relationship Diagram) section |
 | 2026-04-10 | 2.0 | **BREAKING**: Renamed `project_periods` → `project_wbs`, `period` → `name_of_work_phase`. Updated all API endpoints. |
+| 2026-04-10 | 2.1 | **UPDATED**: Added work-item filtered endpoints (`/api/work-items/{workItem}/materials`, `/api/work-items/{workItem}/equipment`) for Level 5. Clarified difference between WBS-level and work-item-level endpoints. |
 
 ---
 

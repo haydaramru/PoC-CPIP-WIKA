@@ -38,6 +38,10 @@ Route::get('/wbs-phases/{wbsModel}/work-items',               [WorkItemControlle
 Route::get('/wbs-phases/{wbsModel}/materials',                [MaterialLogController::class, 'index']);
 Route::get('/wbs-phases/{wbsModel}/equipment',                [EquipmentLogController::class, 'index']);
 
+// Work item specific endpoints (Level 5 - per work item)
+Route::get('/work-items/{workItem}/materials',                [MaterialLogController::class, 'showByWorkItem']);
+Route::get('/work-items/{workItem}/equipment',                [EquipmentLogController::class, 'showByWorkItem']);
+
 Route::get('/projects/{project}/progress-curve',   [ProgressCurveController::class, 'index']);
 Route::get('/projects/{project}/risks',            [ProjectRiskController::class, 'index']);
 

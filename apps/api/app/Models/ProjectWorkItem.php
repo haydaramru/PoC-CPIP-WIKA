@@ -18,6 +18,9 @@ class ProjectWorkItem extends Model
         'item_no',
         'item_name',
         'sort_order',
+        'volume',
+        'satuan',
+        'harsat_internal',
         'budget_awal',
         'addendum',
         'total_budget',
@@ -28,15 +31,17 @@ class ProjectWorkItem extends Model
     ];
 
     protected $casts = [
-        'level'        => 'integer',
-        'sort_order'   => 'integer',
-        'budget_awal'  => 'decimal:2',
-        'addendum'     => 'decimal:2',
-        'total_budget' => 'decimal:2',
-        'realisasi'    => 'decimal:2',
-        'deviasi'      => 'decimal:2',
-        'deviasi_pct'  => 'decimal:4',
-        'is_total_row' => 'boolean',
+        'level'           => 'integer',
+        'sort_order'      => 'integer',
+        'volume'          => 'decimal:2',
+        'harsat_internal' => 'decimal:2',
+        'budget_awal'     => 'decimal:2',
+        'addendum'        => 'decimal:2',
+        'total_budget'    => 'decimal:2',
+        'realisasi'       => 'decimal:2',
+        'deviasi'         => 'decimal:2',
+        'deviasi_pct'     => 'decimal:4',
+        'is_total_row'    => 'boolean',
     ];
 
     public function period(): BelongsTo
