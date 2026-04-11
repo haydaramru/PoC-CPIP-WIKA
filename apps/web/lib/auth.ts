@@ -1,5 +1,5 @@
 const TOKEN_KEY = "cpip_token";
-const USER_KEY  = "cpip_user";
+const USER_KEY = "cpip_user";
 
 export interface AuthUser {
   id: number;
