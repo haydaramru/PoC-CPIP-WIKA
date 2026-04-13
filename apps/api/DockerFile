@@ -6,13 +6,15 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 
 # Install dependencies tanpa dev (production)
+# --ignore-platform-reqs: extensions (gd, zip, etc.) are in the runtime stage, not this build stage
 RUN composer install \
     --no-dev \
     --no-interaction \
+    --no-progress \
     --no-scripts \
+    --ignore-platform-reqs \
     --optimize-autoloader \
-    --prefer-dist \
-    -vvv 2>&1 || { echo "=== COMPOSER FAILED ==="; composer diagnose; exit 1; }
+    --prefer-dist
 
 # ── Stage 2: Production image ─────────────────────────────────────────────────
 FROM php:8.3-fpm-alpine
