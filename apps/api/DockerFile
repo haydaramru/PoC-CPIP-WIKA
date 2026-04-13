@@ -23,14 +23,18 @@ FROM php:8.3-fpm-alpine
 RUN apk add --no-cache \
     nginx \
     sqlite \
+    sqlite-dev \
     libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
     libzip-dev \
     zip \
     unzip \
     supervisor
 
 # Install PHP extensions
-RUN docker-php-ext-install \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
     pdo \
     pdo_sqlite \
     zip \
