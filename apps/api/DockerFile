@@ -9,10 +9,10 @@ COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
     --no-interaction \
-    --no-progress \
     --no-scripts \
     --optimize-autoloader \
-    --prefer-dist
+    --prefer-dist \
+    -vvv 2>&1 || { echo "=== COMPOSER FAILED ==="; composer diagnose; exit 1; }
 
 # ── Stage 2: Production image ─────────────────────────────────────────────────
 FROM php:8.3-fpm-alpine
