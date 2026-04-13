@@ -10,9 +10,13 @@ export interface Project {
   division: Division;
   sbu: string | null;
   owner: string | null;
+  profit_center: string | null;
+  type_of_contract: string | null;
   contract_type: string | null;
   payment_method: string | null;
   partnership: string | null;
+  partner_name: string | null;
+  consultant_name: string | null;
   funding_source: string | null;
   location: string | null;
   contract_value: string;
