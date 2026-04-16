@@ -17,6 +17,7 @@ import {
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { authApi } from "@/lib/api";
 import { clearToken } from "@/lib/auth";
+import wika from "@/public/WIka-new.svg";
 
 const menuGroups = [
   {
@@ -70,7 +71,7 @@ export default function Sidebar() {
           paddingLeft: "18px",
         }}
       >
-        {!collapsed && <Image src="/logo-wika.svg" alt="WIKA Logo" width={80} height={32} priority />}
+        {!collapsed && <Image src={wika} alt="WIKA Logo" priority />}
 
         <button
           onClick={toggle}
