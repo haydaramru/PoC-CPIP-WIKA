@@ -127,7 +127,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     A[POST /api/auth/login] --> B{remember?}
-    B -->|true|  C[expires_at = now + 30d]
+    B -->|true| C[expires_at = now + 30d]
     B -->|false| D[expires_at = now + 12h]
     C --> E[pruneOldSessions MAX=3]
     D --> E
