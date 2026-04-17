@@ -3,7 +3,7 @@
 import { useState, FormEvent, useEffect } from "react"; // Tambahkan useEffect
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
-import { setToken, setUser } from "@/lib/auth";
+import { setToken, setTokenExpiry, setUser } from "@/lib/auth";
 import ilustration from "@/public/Ilustration.svg";
 import wika from "@/public/WIKA.svg";
 import wikaNew from "@/public/WIka-new.svg";
@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [rememberMe, setRememberMe] = useState(false); // State untuk Remember Me
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +29,7 @@ export default function LoginPage() {
     const savedEmail = localStorage.getItem("rememberedEmail");
     if (savedEmail) {
       setEmail(savedEmail);
-      setRememberMe(true);
+      setRemember(true);
     }
   }, []);
 
@@ -41,10 +41,9 @@ export default function LoginPage() {
     try {
       let data: any;
       if (mode === "login") {
-        data = await authApi.login(email, password);
+        data = await authApi.login(email, password, remember);
 
-        // Logika Remember Me jika login berhasil
-        if (rememberMe) {
+        if (remember) {
           localStorage.setItem("rememberedEmail", email);
         } else {
           localStorage.removeItem("rememberedEmail");
@@ -59,6 +58,7 @@ export default function LoginPage() {
       }
 
       setToken(data.token);
+      setTokenExpiry(data.expires_at ?? null);
       setUser(data.user);
       router.push("/");
     } catch (err: any) {
@@ -168,8 +168,8 @@ export default function LoginPage() {
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
                       className="w-4 h-4 rounded border-gray-300 text-primary-blue focus:ring-primary-blue cursor-pointer"
                     />
                     <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">Remember me</span>

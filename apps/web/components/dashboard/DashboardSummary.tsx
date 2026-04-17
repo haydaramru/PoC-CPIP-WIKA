@@ -72,7 +72,7 @@ export default function DashboardSummary() {
 
   return (
     <div className="bg-[#F9FAFB] min-h-screen">
-      <QuickFilterPreview onSearch={handleSearch} onReset={handleReset} />
+      <QuickFilterPreview onSearch={handleSearch} onReset={handleReset} onExport={() => {}} />
 
       <KpiCards data={summary} filters={filters} onChange={setFilters} />
       <DivisionChart data={summary} />

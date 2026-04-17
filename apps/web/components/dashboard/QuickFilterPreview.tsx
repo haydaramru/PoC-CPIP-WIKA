@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CaretDownIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { projectApi } from "@/lib/api";
 import type { FilterOptionsResponse } from "@/types/project";
@@ -17,9 +17,10 @@ const EMPTY_FILTERS: FilterState = { sbu: "", owner: "", contract: "", partnersh
 interface QuickFilterPreviewProps {
   onSearch: (filters: FilterState) => void;
   onReset: () => void;
+  onExport?: () => void;
 }
 
-export default function QuickFilterPreview({ onSearch, onReset }: QuickFilterPreviewProps) {
+export default function QuickFilterPreview({ onSearch, onReset, onExport }: QuickFilterPreviewProps) {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [options, setOptions] = useState<FilterOptionsResponse | null>(null);
   const router = useRouter();
@@ -54,7 +55,19 @@ export default function QuickFilterPreview({ onSearch, onReset }: QuickFilterPre
 
   return (
     <div className="bg-white w-full" style={{ padding: "18px 32px" }}>
-      <h2 className="text-[18px] font-bold text-[#1B1C1F] mb-4">Quick Filter Preview</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[18px] font-bold text-[#1B1C1F]">Quick Filter Preview</h2>
+        {onExport && (
+          <button
+            onClick={onExport}
+            className="flex items-center gap-2 bg-primary-blue text-white text-[13px] font-bold rounded-lg px-4 hover:brightness-110 transition-all"
+            style={{ height: "38px" }}
+          >
+            Export Data
+            <DownloadSimpleIcon size={16} weight="bold" />
+          </button>
+        )}
+      </div>
 
       <div className="flex items-center gap-4 mb-4">
         {filterDefs.map(({ key, label, optionKey }) => (

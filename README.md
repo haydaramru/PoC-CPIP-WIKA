@@ -117,10 +117,23 @@ flowchart LR
 
 ### Authentication & Authorization
 
-- **Laravel Sanctum** for token-based API authentication
-- Every `Project` query is auto-scoped to `Auth::id()` via a global scope in `Project::booted()`
-- Composite unique constraint: `[project_code, user_id]` — different users can have the same project code
-- Roles: `admin` and `user` (stored in `users.role`)
+- **Laravel Sanctum** bearer-token auth. Tokens are returned from `POST /api/auth/login` and sent as `Authorization: Bearer <token>` on subsequent calls.
+- **Multi-device sessions** — up to **3** concurrent tokens per user. When a 4th login arrives, the oldest token (by `last_used_at`, then `created_at`) is pruned automatically.
+- **Remember Me** — `remember=true` issues a **30-day** token; `remember=false` (default) issues a **12-hour** token. The TTL is enforced by Sanctum's `expires_at`.
+- **Device metadata** — each token stores `ip_address`, `user_agent`, and `remember` so the user can review and revoke sessions via `GET/DELETE /api/auth/sessions`.
+- **Shared data model** — projects and ingestion files are **not** per-user scoped. Any authenticated user can see and reprocess everyone's uploads (single shared corpus for the PoC).
+- Roles: `admin` and `user` (stored in `users.role`).
+
+```mermaid
+flowchart LR
+    A[POST /api/auth/login] --> B{remember?}
+    B -->|true| C[expires_at = now + 30d]
+    B -->|false| D[expires_at = now + 12h]
+    C --> E[pruneOldSessions MAX=3]
+    D --> E
+    E --> F[createToken with ip + user_agent + remember]
+    F --> G[Return token + expires_at + user]
+```
 
 ### Key Design Patterns
 
@@ -130,7 +143,7 @@ flowchart LR
 | **Boot Hook Auto-KPI** | `Project::booted()` | CPI/SPI recalculated on every `Project::save()` |
 | **Boot Hook Auto-Severity** | `ProjectRisk::booted()` | Risk severity = probability × impact |
 | **Strategy Pattern** | `resolveImporter()` | Selects correct parser based on file structure |
-| **Composite Unique** | `projects` table | Per-user data isolation |
+| **Session Cap** | `AuthController::pruneOldSessions()` | Max 3 active Sanctum tokens per user, oldest pruned on 4th login |
 | **Alias Resolution** | `WorkbookFieldMapper` | Builtin + DB aliases decouple import from header naming |
 | **Forward-Fill** | `PolaCImport::parseEquipmentSheet()` | Handles merged cells in equipment vendor column |
 
@@ -190,7 +203,7 @@ resolveImporter($filePath)
 4. For each data row:
    - Skip empty rows
    - Validate via Laravel Validator (division enum, numeric ranges, etc.)
-   - `Project::updateOrCreate()` keyed on `[project_code, user_id]`
+   - `Project::updateOrCreate()` keyed on `project_code`
 
 **Tables written**: `projects`
 
@@ -409,7 +422,7 @@ Auto-triggered on every `Project::save()` via the model's boot hook.
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | id | bigint | PK, auto-increment | |
-| project_code | varchar(20) | Composite unique with user_id | e.g., `WIKA-TOL-SD2-2024` |
+| project_code | varchar(20) | Unique | e.g., `WIKA-TOL-SD2-2024` |
 | project_name | varchar(255) | NOT NULL | |
 | division | varchar(100) | Nullable, enum: Infrastructure/Building | |
 | sbu | varchar(100) | Nullable | Strategic Business Unit |
@@ -426,11 +439,12 @@ Auto-triggered on every `Project::save()` via the model's boot hook.
 | cpi | decimal(10,4) | Nullable | Auto-calculated |
 | spi | decimal(10,4) | Nullable | Auto-calculated |
 | status | varchar(20) | Nullable | good/warning/critical/unknown |
-| user_id | bigint | FK → users | Per-user isolation |
 | ingestion_file_id | bigint | FK → ingestion_files, nullable | Source file |
 | profit_center, type_of_contract, contract_type, payment_method, partnership, partner_name, consultant_name, funding_source, location | varchar | All nullable | Extended project fields |
 
-**Indexes**: `[project_code, user_id]` (unique), `division`, `status`, `project_year`
+**Indexes**: `project_code` (unique), `division`, `status`, `project_year`
+
+> **Note:** The `user_id` column was dropped — uploads are shared across all users.
 
 #### `project_wbs`
 
@@ -559,7 +573,6 @@ Auto-triggered on every `Project::save()` via the model's boot hook.
 | imported_rows | int | Nullable | |
 | skipped_rows | int | Nullable | |
 | errors | json | Nullable | Array of error messages |
-| user_id | bigint | FK → users | |
 | processed_at | timestamp | Nullable | |
 
 #### `column_aliases`
@@ -605,7 +618,6 @@ erDiagram
         decimal spi
         string status
         int project_year
-        bigint user_id FK
         bigint ingestion_file_id FK
     }
 
@@ -698,7 +710,19 @@ erDiagram
         int imported_rows
         int skipped_rows
         json errors
-        bigint user_id FK
+    }
+
+    personal_access_tokens {
+        bigint id PK
+        string tokenable_type
+        bigint tokenable_id FK
+        string name
+        string token UK
+        string ip_address
+        string user_agent
+        boolean remember
+        timestamp expires_at
+        timestamp last_used_at
     }
 
     column_aliases {
@@ -720,8 +744,7 @@ erDiagram
     }
 
     %% RELATIONSHIPS
-    users ||--o{ projects : "owns"
-    users ||--o{ ingestion_files : "uploads"
+    users ||--o{ personal_access_tokens : "has sessions"
     users ||--o{ column_aliases : "creates"
     
     projects ||--o{ project_wbs : "has phases"
@@ -840,9 +863,13 @@ flowchart TD
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | POST | `/api/auth/register` | Register new user | No |
-| POST | `/api/auth/login` | Login, returns Bearer token | No |
-| POST | `/api/auth/logout` | Revoke token | Yes |
+| POST | `/api/auth/login` | Login. Body: `email`, `password`, `remember?` (30d vs 12h TTL), `device_name?`. Returns `{ token, expires_at, remember, user }` | No |
+| POST | `/api/auth/logout` | Revoke current token | Yes |
 | GET | `/api/auth/me` | Current user info | Yes |
+| GET | `/api/auth/sessions` | List user's active devices with `ip_address`, `user_agent`, `expires_at`, `is_current` | Yes |
+| DELETE | `/api/auth/sessions/{id}` | Revoke one specific session | Yes |
+
+> **Session cap:** max 3 concurrent tokens per user — the 4th login prunes the oldest by `last_used_at`.
 
 ### Projects
 
@@ -852,6 +879,7 @@ flowchart TD
 | GET | `/api/projects/summary` | Dashboard KPIs: avg CPI/SPI, status counts, division breakdown |
 | GET | `/api/projects/sbu-distribution` | SBU chart data |
 | GET | `/api/projects/filter-options` | Available filter values |
+| GET | `/api/projects/export-dashboard` | **Composite** dashboard payload for PDF export: `{ generated_at, filters, summary, sbu_distribution, filter_options, division_kpis, projects }` — single call consolidating everything the Home dashboard renders |
 | GET | `/api/projects/{id}` | Project detail |
 | GET | `/api/projects/{id}/insight` | AI-style analysis bullets |
 | POST | `/api/projects` | Create project manually |

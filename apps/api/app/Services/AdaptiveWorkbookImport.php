@@ -11,7 +11,6 @@ use App\Models\ProjectWbs;
 use App\Models\ProjectProgressCurve;
 use App\Models\ProjectRisk;
 use App\Models\ProjectWorkItem;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -641,7 +640,7 @@ class AdaptiveWorkbookImport
             $integer = fn($key) => isset($data[$key]) && $data[$key] !== '' ? (int)   $data[$key] : null;
 
             $project = Project::updateOrCreate(
-                ['project_code' => trim((string) $data['project_code']), 'user_id' => Auth::id()],
+                ['project_code' => trim((string) $data['project_code'])],
                 [
                     'ingestion_file_id' => $ingestionFileId,
                     'project_name'      => trim((string) $data['project_name']),
