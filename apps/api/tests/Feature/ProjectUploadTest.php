@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Laravel\Sanctum\Sanctum;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PHPUnit\Framework\Attributes\Test;
@@ -627,5 +629,41 @@ class ProjectUploadTest extends TestCase
         ]);
 
         @unlink($path);
+    }
+
+    #[Test]
+    public function uploaded_files_and_projects_are_visible_to_other_users(): void
+    {
+        $headers = [
+            'project_code',
+            'project_name',
+            'division',
+            'contract_value',
+            'planned_cost',
+            'actual_cost',
+            'planned_duration',
+            'actual_duration',
+        ];
+        $path = $this->makeExcelFile($headers, [
+            ['SHARE-01', 'Shared Project', 'Building', 500, 450, 460, 12, 12],
+        ]);
+
+        $this->postJson('/api/projects/upload', [
+            'files' => [$this->makeUploadedFile($path)],
+        ])->assertOk();
+
+        @unlink($path);
+
+        // Swap to a different authenticated user
+        $otherUser = User::factory()->create();
+        Sanctum::actingAs($otherUser);
+
+        $this->getJson('/api/projects')
+            ->assertOk()
+            ->assertJsonFragment(['project_code' => 'SHARE-01']);
+
+        $this->getJson('/api/ingestion-files')
+            ->assertOk()
+            ->assertJsonFragment(['original_name' => 'test_projects.xlsx']);
     }
 }

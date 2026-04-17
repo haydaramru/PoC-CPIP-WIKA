@@ -8,7 +8,6 @@ use App\Models\ProjectMaterialLog;
 use App\Models\ProjectWbs;
 use App\Models\ProjectProgressCurve;
 use App\Models\ProjectWorkItem;
-use Illuminate\Support\Facades\Auth;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 /**
@@ -224,7 +223,7 @@ class PolaCImport
 
         // Upsert project
         $project = Project::firstOrCreate(
-            ['project_code' => $meta['project_code'], 'user_id' => Auth::id()],
+            ['project_code' => $meta['project_code']],
             [
                 'project_name'      => $meta['project_name'] ?? $meta['project_code'],
                 'division'          => $meta['division'] ?? null,

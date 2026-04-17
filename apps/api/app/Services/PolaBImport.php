@@ -6,7 +6,6 @@ use App\Models\Project;
 use App\Models\ProjectMaterialLog;
 use App\Models\ProjectWbs;
 use App\Models\ProjectWorkItem;
-use Illuminate\Support\Facades\Auth;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 /**
@@ -65,7 +64,7 @@ class PolaBImport
 
         // Upsert project — financial/operational fields are nullable when not in file
         $project = Project::firstOrCreate(
-            ['project_code' => $meta['project_code'], 'user_id' => Auth::id()],
+            ['project_code' => $meta['project_code']],
             [
                 'project_name'      => $meta['project_name'] ?? $meta['project_code'],
                 'division'          => $meta['division'] ?? null,

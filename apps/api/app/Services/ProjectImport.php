@@ -6,7 +6,6 @@ use App\Enums\Division;
 use App\Exceptions\ImportValidationException;
 use App\Models\ColumnAlias;
 use App\Models\Project;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -90,7 +89,7 @@ class ProjectImport
             $integer = fn($key) => isset($data[$key]) && $data[$key] !== '' ? (int)   $data[$key] : null;
 
             Project::updateOrCreate(
-                ['project_code' => trim($data['project_code']), 'user_id' => Auth::id()],
+                ['project_code' => trim($data['project_code'])],
                 [
                     'ingestion_file_id' => $ingestionFileId,
                     'project_name'      => trim($data['project_name']),
