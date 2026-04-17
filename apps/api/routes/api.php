@@ -35,6 +35,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/projects/summary',                    [ProjectController::class, 'summary']);
 Route::get('/projects/sbu-distribution',           [ProjectController::class, 'sbuDistribution']);
 Route::get('/projects/filter-options',             [ProjectController::class, 'filterOptions']);
+Route::get('/projects/building/cpi',               [ProjectController::class, 'buildingCpiList']);
+Route::get('/projects/building/spi',               [ProjectController::class, 'buildingSpiList']);
+Route::get('/projects/infrastructure/cpi',         [ProjectController::class, 'infrastructureCpiList']);
+Route::get('/projects/infrastructure/spi',         [ProjectController::class, 'infrastructureSpiList']);
 Route::get('/projects/{project}/insight',          [ProjectController::class, 'insight']);
 Route::get('/projects',                            [ProjectController::class, 'index']);
 Route::get('/projects/{project}',                  [ProjectController::class, 'show']);
