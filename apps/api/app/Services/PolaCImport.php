@@ -100,8 +100,8 @@ class PolaCImport
 
             if ($hppPlan || $hppActual) {
                 $phase->update([
-                    'hpp_plan_total'   => $hppPlan ?: $phase->hpp_plan_total,
-                    'hpp_actual_total' => $hppActual ?: $phase->hpp_actual_total,
+                    'actual_costs'     => $hppPlan ?: $phase->actual_costs,
+                    'realized_costs'   => $hppActual ?: $phase->realized_costs,
                     'hpp_deviation'    => ($hppPlan ?: 0) - ($hppActual ?: 0),
                 ]);
             }
@@ -264,7 +264,7 @@ class PolaCImport
                     'progress_total_pct' => $meta['progress_total_pct'] ?? null,
                     'contract_value'     => $meta['contract_value'] ?? null,
                     'addendum_value'     => $meta['addendum_value'] ?? null,
-                    'total_pagu'         => $totalPagu ?: null,
+                    'bq_external'        => $totalPagu ?: null,
                 ]
             );
             $phaseMap['_default'] = $phase;
@@ -319,8 +319,8 @@ class PolaCImport
                     'report_source'      => 'file_import',
                     'progress_total_pct' => $actualPct,
                     'contract_value'     => $budget,
-                    'hpp_plan_total'     => $budget,
-                    'hpp_actual_total'   => $actual,
+                    'actual_costs'       => $budget,
+                    'realized_costs'     => $actual,
                     'hpp_deviation'      => $budget !== null && $actual !== null ? $budget - $actual : null,
                 ]
             );
