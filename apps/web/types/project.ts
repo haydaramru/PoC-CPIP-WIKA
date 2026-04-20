@@ -207,6 +207,7 @@ export interface SbuDistributionItem {
 
 export interface FilterOptionsResponse {
   division: string[];
+  project_code: string[];
   sbu: string[];
   owner: string[];
   contract_type: string[];
