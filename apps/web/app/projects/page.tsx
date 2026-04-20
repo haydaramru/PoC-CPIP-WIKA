@@ -137,19 +137,19 @@ const FILTER_GRID: {
   optionKey?: keyof FilterOptionsResponse;
   placeholder?: string;
 }[] = [
-  { key: "project_name", label: "Project Name", placeholder: "e.g. Gedung RS" },
-  { key: "contract_type", label: "Contract Pricing Type", optionKey: "contract_type", placeholder: "Type Contract Pricing" },
-  { key: "consultant_name", label: "Project Consultant", placeholder: "e.g. PT Virama Karya..." },
-  { key: "division", label: "Profit Center / Division", optionKey: "division", placeholder: "Type Division" },
-  { key: "sbu", label: "SBU Project", optionKey: "sbu", placeholder: "Type SBU Project" },
-  { key: "location", label: "Location", placeholder: "e.g. Surabaya, Jawa Timur" },
-  { key: "owner", label: "Project Owner", optionKey: "owner", placeholder: "Type Project Owner" },
-  { key: "payment_method", label: "Payment Method", optionKey: "payment_method", placeholder: "Type Payment Method" },
-  { key: "partnership", label: "Partnership Type", optionKey: "partnership", placeholder: "Type Partnership" },
-  { key: "funding_source", label: "Funding Source", optionKey: "funding_source", placeholder: "Type Funding Source" },
-  { key: "planned_duration", label: "Project Duration (Months)", placeholder: "e.g. 24" },
+  { key: "project_name", label: "Project Name", placeholder: "Input Project Name" },
+  { key: "contract_type", label: "Contract Pricing Type", optionKey: "contract_type", placeholder: "Select Contract Pricing Type" },
+  { key: "consultant_name", label: "Project Consultant", placeholder: "Input Project Consultant" },
+  { key: "project_code", label: "Profit Center Code /  Internal SPK Code", optionKey: "project_code", placeholder: "Select Code" },
+  { key: "sbu", label: "SBU Project", optionKey: "sbu", placeholder: "Select SBU Project" },
+  { key: "location", label: "Location", placeholder: "Input Location" },
+  { key: "owner", label: "Project Owner (Name & Category)", optionKey: "owner", placeholder: "Select Project Owner" },
+  { key: "payment_method", label: "Payment Method", optionKey: "payment_method", placeholder: "Select Payment Method" },
+  { key: "partnership", label: "Partnership Type", optionKey: "partnership", placeholder: "Select Partnership Type" },
+  { key: "funding_source", label: "Funding Source", optionKey: "funding_source", placeholder: "Select Funding Source" },
+  { key: "planned_duration", label: "Project Duration (Months)", placeholder: "e.g 12 months" },
   { key: "partner_name", label: "Partnership Name", placeholder: "Enter Partnership Name" },
-  { key: "type_of_contract", label: "Contract Method", optionKey: "type_of_contract" as any, placeholder: "Type Contract Method" },
+  { key: "type_of_contract", label: "Contract Method", optionKey: "type_of_contract" as any, placeholder: "Select Contract Method" },
 ];
 
 export default function ProjectsPage() {
