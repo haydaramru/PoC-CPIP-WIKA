@@ -22,6 +22,7 @@ export interface Project {
   contract_value: string;
   hpp: string;
   planned_cost: string;
+  delivery_budget_status: string;
   actual_cost: string;
   planned_duration: number;
   actual_duration: number;

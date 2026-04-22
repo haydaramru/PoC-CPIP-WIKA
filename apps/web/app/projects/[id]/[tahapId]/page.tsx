@@ -60,10 +60,11 @@ export default function Level4Page() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[#F9FAFB] border-b border-gray-100">
-              <th className="px-6 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider w-12">#</th>
+              <th className="px-6 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">ID Material</th>
               <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Item Sumber Daya</th>
               <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Volume</th>
               <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Satuan</th>
+              <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Kategori Material</th>
               <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Harsat Internal</th>
               <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Total Biaya</th>
               <th className="px-4 py-4 text-left text-[12px] font-bold text-gray-500 uppercase tracking-wider">Detail</th>
@@ -72,10 +73,11 @@ export default function Level4Page() {
           <tbody className="divide-y divide-gray-50">
             {data.items.map((item: any, idx: number) => (
               <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-[14px] text-gray-600 font-medium">{idx + 1}</td>
+                <td className="px-6 py-4 text-[14px] text-gray-600 font-medium">{item.id_material}</td>
                 <td className="px-4 py-4 text-[14px] font-semibold text-[#1B1C1F]">{item.name || "-"}</td>
                 <td className="px-4 py-4 text-[14px] text-gray-700">{item.volume ? Number(item.volume).toLocaleString("id-ID") : "-"}</td>
                 <td className="px-4 py-4 text-[14px] text-gray-700">{formatSatuan(item.unit || item.satuan)}</td>
+                <td className="px-4 py-4 text-[14px] text-gray-700">{item.material_category || "-"}</td>
                 <td className="px-4 py-4 text-[14px] text-gray-700">
                   {item.harsatInternal || item.internalPrice ? formatCurrency(item.harsatInternal ?? item.internalPrice) : "-"}
                 </td>

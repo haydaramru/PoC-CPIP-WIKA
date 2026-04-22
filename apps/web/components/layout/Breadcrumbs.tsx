@@ -10,7 +10,7 @@ import {
   CaretRightIcon,
   UploadIcon,
   FileTextIcon,
-  FunnelIcon, // Tambahkan FunnelIcon
+  FunnelIcon,
   IconProps,
   TreeStructureIcon,
   BuildingOfficeIcon,
@@ -18,6 +18,8 @@ import {
   SpeedometerIcon,
   MoneyWavyIcon,
   CalendarBlankIcon,
+  FileArrowUpIcon,
+  PackageIcon,
 } from "@phosphor-icons/react";
 import { projectApi, periodApi } from "@/lib/api";
 
@@ -60,9 +62,15 @@ const STATIC_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
     { Icon: SpeedometerIcon, label: "Division Performance Comparison", href: "/projects" }, // Sesuaikan href jika perlu
     { Icon: CalendarBlankIcon, label: "SPI Infrastructure" },
   ],
-  "/upload": [
+  "/data-management/upload": [
     { Icon: HouseIcon, label: "Home", href: "/" },
     { Icon: UploadIcon, label: "Data Management" },
+    { Icon: FileArrowUpIcon, label: "Upload" },
+  ],
+  "/data-management/material": [
+    { Icon: HouseIcon, label: "Home", href: "/" },
+    { Icon: UploadIcon, label: "Data Management" },
+    { Icon: PackageIcon, label: "Material" },
   ],
 };
 

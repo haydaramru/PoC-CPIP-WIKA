@@ -297,7 +297,20 @@ export default function ProjectsPage() {
                   <td className={`px-4 py-4 text-[14px] font-bold ${kpiColor(String(project.cpi))}`}>
                     {project.cpi ? Number(project.cpi).toFixed(2) : "-"}
                   </td>
-                  <td className="px-4 py-4 text-[14px] text-gray-600 capitalize">{project.delivery_budget_status || "-"}</td>
+                  <td className="px-4 py-4">
+                    <span
+                      className={`px-3 py-1.5 border rounded-full text-[12px] font-medium whitespace-nowrap inline-block capitalize ${
+                        {
+                          "On Time On Budget": "bg-green-50 text-green-700 border-green-200",
+                          "On Time Overbudget": "bg-orange-50 text-orange-700 border-orange-200",
+                          "Delay On Budget": "bg-yellow-50 text-yellow-700 border-yellow-200",
+                          "Delay Overbudget": "bg-red-50 text-red-700 border-red-200",
+                        }[project.delivery_budget_status] || "bg-gray-50 text-gray-600 border-gray-200"
+                      }`}
+                    >
+                      {project.delivery_budget_status || "-"}
+                    </span>
+                  </td>
                   <td className="px-4 py-4">
                     <button
                       onClick={() => router.push(`/projects/${project.id}`)}
