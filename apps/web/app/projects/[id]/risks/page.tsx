@@ -45,7 +45,7 @@ export default function Level7Page() {
 
   return (
     <div className="bg-white min-h-screen" style={{ padding: "24px 32px" }}>
-      <PageHeader title="Level 7A Kamus Risiko (Historical Risk Register)" onExport={() => {}} />
+      <PageHeader title="Level 6A Kamus Risiko (Historical Risk Register)" onExport={() => {}} />
 
       <div className="overflow-hidden border border-gray-100 rounded-xl mb-10">
         <table className="w-full border-collapse">
@@ -77,11 +77,7 @@ export default function Level7Page() {
                   <td className="px-4 py-4 text-[14px] text-red-600 font-medium">
                     <div className="flex items-center gap-1">
                       <span>↑</span>
-                      <span>
-                        {risk.financial_impact_idr
-                          ? `+Rp${Number(risk.financial_impact_idr).toLocaleString("id-ID")}`
-                          : "-"}
-                      </span>
+                      <span>{risk.financial_impact_idr ? `+Rp${Number(risk.financial_impact_idr).toLocaleString("id-ID")}` : "-"}</span>
                     </div>
                   </td>
 
@@ -99,7 +95,7 @@ export default function Level7Page() {
         </table>
       </div>
 
-      <h2 className="text-[18px] font-bold text-[#1B1C1F] mb-4">Level 7B Project Timeline</h2>
+      <h2 className="text-[18px] font-bold text-[#1B1C1F] mb-4">Level 6B Project Timeline</h2>
 
       {curve?.timeline ? (
         <div className="grid grid-cols-2 gap-6 mb-6">

@@ -162,7 +162,7 @@ export default function Level5Page() {
 
       <div className="flex items-center justify-between border-t border-gray-100 pt-6">
         <BackButton label="Kembali ke Level 4" href={`/projects/${params.id}/${params.tahapId}`} />
-        <ActionButton label="Cek HPP Level" href={`/projects/${params.id}/${params.tahapId}/${params.itemId}/hpp`} />
+        <ActionButton label="Cek Risk & Timeline" href={`/projects/${params.id}/risks`} />
       </div>
     </div>
   );
