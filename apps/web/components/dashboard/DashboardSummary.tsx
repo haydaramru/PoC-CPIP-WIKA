@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { projectApi } from "@/lib/api";
-import type { SummaryResponse, Project } from "@/types/project";
-import type { DashboardFilters } from "@/types/project";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { dashboardApi } from "@/lib/api";
+import type { DashboardApiResponse, DashboardProject, DashboardSummaryData } from "@/types/dashboard";
 import QuickFilterPreview from "@/components/dashboard/QuickFilterPreview";
 import KpiCards from "@/components/dashboard/KpiCards";
 import DivisionChart from "@/components/dashboard/DivisionChart";
@@ -13,45 +12,133 @@ import ParetoTables from "@/components/dashboard/ParetoTables";
 import RiskProjectTable from "@/components/dashboard/RiskProjectTable";
 import Snackbar from "@/components/ui/Snackbar";
 
+export type ActiveFilters = {
+  sbu: string;
+  owner: string;
+  contract_type: string;
+  partnership: string;
+  division: string;
+  year: string;
+  location: string;
+  funding_source: string;
+};
+
+const EMPTY_FILTERS: ActiveFilters = {
+  sbu: "",
+  owner: "",
+  contract_type: "",
+  partnership: "",
+  division: "",
+  year: "",
+  location: "",
+  funding_source: "",
+};
+
+function computeSummary(projects: DashboardProject[]): DashboardSummaryData {
+  const total = projects.length;
+  const overbudgetCount = projects.filter((p) => parseFloat(p.cpi) < 1).length;
+  const delayCount = projects.filter((p) => parseFloat(p.spi) < 1).length;
+  const avgCpi = total > 0 ? projects.reduce((acc, p) => acc + parseFloat(p.cpi ?? "0"), 0) / total : 0;
+  const avgSpi = total > 0 ? projects.reduce((acc, p) => acc + parseFloat(p.spi ?? "0"), 0) / total : 0;
+
+  const byDivision: DashboardSummaryData["by_division"] = {};
+  projects.forEach((p) => {
+    const div = p.division ?? "";
+    if (!byDivision[div]) byDivision[div] = { total: 0, avg_cpi: 0, avg_spi: 0, overbudget_count: 0, delay_count: 0 };
+    byDivision[div].total++;
+    byDivision[div].avg_cpi += parseFloat(p.cpi ?? "0");
+    byDivision[div].avg_spi += parseFloat(p.spi ?? "0");
+    if (parseFloat(p.cpi) < 1) byDivision[div].overbudget_count++;
+    if (parseFloat(p.spi) < 1) byDivision[div].delay_count++;
+  });
+  Object.keys(byDivision).forEach((k) => {
+    byDivision[k].avg_cpi /= byDivision[k].total;
+    byDivision[k].avg_spi /= byDivision[k].total;
+  });
+
+  const statusBreakdown: Record<string, number> = {};
+  projects.forEach((p) => {
+    statusBreakdown[p.status] = (statusBreakdown[p.status] ?? 0) + 1;
+  });
+
+  const profitability = [...projects]
+    .sort((a, b) => parseFloat(b.gross_profit_pct ?? "0") - parseFloat(a.gross_profit_pct ?? "0"))
+    .slice(0, 10)
+    .map((p) => ({
+      name: p.project_name,
+      pct: `${parseFloat(p.gross_profit_pct ?? "0").toFixed(1)}%`,
+    }));
+
+  const overrunPct = (p: DashboardProject) =>
+    p.planned_cost && parseFloat(p.planned_cost) > 0
+      ? ((parseFloat(p.actual_cost) - parseFloat(p.planned_cost)) / parseFloat(p.planned_cost)) * 100
+      : 0;
+
+  const overrun = [...projects]
+    .filter((p) => overrunPct(p) > 0)
+    .sort((a, b) => overrunPct(b) - overrunPct(a))
+    .slice(0, 10)
+    .map((p) => ({ name: p.project_name, pct: `${overrunPct(p).toFixed(1)}%` }));
+
+  return {
+    total_projects: total,
+    avg_cpi: avgCpi,
+    avg_spi: avgSpi,
+    overbudget_count: overbudgetCount,
+    delay_count: delayCount,
+    overbudget_pct: total > 0 ? Math.round((overbudgetCount / total) * 100) : 0,
+    delay_pct: total > 0 ? Math.round((delayCount / total) * 100) : 0,
+    by_division: byDivision,
+    status_breakdown: statusBreakdown,
+    profitability,
+    overrun,
+  };
+}
+
 export default function DashboardSummary() {
-  const [summary, setSummary] = useState<SummaryResponse | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [apiData, setApiData] = useState<DashboardApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchApplied, setSearchApplied] = useState(false);
   const [snackbar, setSnackbar] = useState(false);
 
-  const [filters, setFilters] = useState<DashboardFilters>({
-    division: "",
-    contractRange: "",
-    year: "",
-  });
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(EMPTY_FILTERS);
 
   useEffect(() => {
-    Promise.all([projectApi.summary(), projectApi.list()])
-      .then(([summaryData, listData]) => {
-        setSummary(summaryData);
-        setProjects(listData.data);
-      })
+    dashboardApi
+      .getDashboard()
+      .then((data) => setApiData(data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredProjects = projects.filter((p) => {
-    if (filters.division && p.division !== filters.division) return false;
-    if (filters.contractRange) {
-      const val = parseFloat(p.contract_value);
-      if (filters.contractRange === "0-500" && val >= 500) return false;
-      if (filters.contractRange === "500-999" && val < 500) return false;
-    }
-    return true;
-  });
+  const filteredProjects: DashboardProject[] = useMemo(() => {
+    if (!apiData) return [];
+    return apiData.projects.data.filter((p) => {
+      if (activeFilters.division && (p.division ?? "") !== activeFilters.division) return false;
+      if (activeFilters.sbu && (p.sbu ?? "") !== activeFilters.sbu) return false;
+      if (activeFilters.owner && p.owner !== activeFilters.owner) return false;
+      if (activeFilters.contract_type && (p.contract_type ?? "") !== activeFilters.contract_type) return false;
+      if (activeFilters.partnership && (p.partnership ?? "") !== activeFilters.partnership) return false;
+      if (activeFilters.funding_source && (p.funding_source ?? "") !== activeFilters.funding_source) return false;
+      if (activeFilters.location && (p.location ?? "") !== activeFilters.location) return false;
+      if (activeFilters.year && String(p.project_year) !== activeFilters.year) return false;
+      return true;
+    });
+  }, [apiData, activeFilters]);
 
-  const handleSearch = useCallback(() => {
+  const summary: DashboardSummaryData | null = useMemo(() => {
+    if (!apiData) return null;
+    return computeSummary(filteredProjects);
+  }, [filteredProjects, apiData]);
+
+  const handleSearch = useCallback((filters: ActiveFilters) => {
+    setActiveFilters(filters);
     setSearchApplied(true);
     setSnackbar(true);
   }, []);
 
   const handleReset = useCallback(() => {
+    setActiveFilters(EMPTY_FILTERS);
     setSearchApplied(false);
   }, []);
 
@@ -68,22 +155,37 @@ export default function DashboardSummary() {
     );
   }
 
-  if (!summary) return null;
+  if (!summary || !apiData) return null;
+
+  const kpiFilters = { division: activeFilters.division, contractRange: "", year: activeFilters.year };
 
   return (
     <div className="bg-[#F9FAFB] min-h-screen">
-      <QuickFilterPreview onSearch={handleSearch} onReset={handleReset} onExport={() => {}} />
+      <QuickFilterPreview filterOptions={apiData.filter_options} onSearch={handleSearch} onReset={handleReset} onExport={() => {}} />
 
       <div id="dashboard-export-root">
-        <KpiCards data={summary} filters={filters} onChange={setFilters} />
+        <KpiCards
+          data={summary}
+          filters={kpiFilters}
+          divisionOptions={apiData.filter_options.division ?? []}
+          onChange={(f) =>
+            setActiveFilters((prev) => ({
+              ...prev,
+              division: f.division,
+              year: f.year,
+            }))
+          }
+        />
+
         <DivisionChart data={summary} />
 
         <div className="bg-white flex gap-8 w-full items-stretch" style={{ padding: "18px 32px" }}>
-          <TrendHarsatUtama />
-          <SebaranSBUChart />
+          <TrendHarsatUtama harsatTrend={apiData.harsat_trend} />
+          <SebaranSBUChart sbuDistribution={apiData.sbu_distribution} />
         </div>
 
         <ParetoTables profitability={summary.profitability ?? []} overrun={summary.overrun ?? []} />
+
         {searchApplied && <RiskProjectTable projects={filteredProjects} />}
       </div>
 

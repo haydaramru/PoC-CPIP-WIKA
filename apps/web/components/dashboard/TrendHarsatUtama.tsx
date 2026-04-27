@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import Link from "next/link";
-import { harsatApi } from "@/lib/api";
+
+// ─── Helpers — identik dengan kode asli ──────────────────────────────────────
 
 const PADDING = { top: 10, right: 20, bottom: 0, left: 0 };
 
@@ -33,6 +34,8 @@ function niceCeil(value: number): number {
   return niceFraction * pow;
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface Tooltip {
   visible: boolean;
   x: number;
@@ -49,9 +52,16 @@ interface TrendData {
   data: Record<string, number[]>;
 }
 
-export default function TrendHarsatUtama() {
+interface Props {
+  // Sebelumnya: fetch sendiri via harsatApi.trend()
+  // Sekarang: terima data dari parent (dashboardApi.get())
+  harsatTrend: TrendData;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function TrendHarsatUtama({ harsatTrend }: Props) {
   const chartRef = useRef<HTMLAnchorElement>(null);
-  const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [tooltip, setTooltip] = useState<Tooltip>({
     visible: false,
     x: 0,
@@ -62,18 +72,10 @@ export default function TrendHarsatUtama() {
     color: "",
   });
 
-  useEffect(() => {
-    harsatApi
-      .trend()
-      .then((res) => {
-        if (res.data) setTrendData(res.data);
-      })
-      .catch(console.error);
-  }, []);
-
-  const YEARS = useMemo(() => trendData?.years ?? [], [trendData]);
-  const CATEGORIES = useMemo(() => trendData?.categories ?? [], [trendData]);
-  const DATA = useMemo(() => trendData?.data ?? {}, [trendData]);
+  // Data langsung dari prop — tidak perlu useState/useEffect
+  const YEARS = useMemo(() => harsatTrend?.years ?? [], [harsatTrend]);
+  const CATEGORIES = useMemo(() => harsatTrend?.categories ?? [], [harsatTrend]);
+  const DATA = useMemo(() => harsatTrend?.data ?? {}, [harsatTrend]);
 
   const { maxValue, yTicks } = useMemo(() => {
     const all = CATEGORIES.flatMap((c) => DATA[c.key] ?? []);
@@ -116,13 +118,12 @@ export default function TrendHarsatUtama() {
   const svgH = 300;
   const chartW = svgW - PADDING.left - PADDING.right;
   const chartH = svgH - PADDING.top - PADDING.bottom;
-  const getX = (idx: number) =>
-    PADDING.left + (YEARS.length > 1 ? (idx / (YEARS.length - 1)) * chartW : chartW / 2);
+  const getX = (idx: number) => PADDING.left + (YEARS.length > 1 ? (idx / (YEARS.length - 1)) * chartW : chartW / 2);
   const getY = (val: number) => PADDING.top + chartH - (val / maxValue) * chartH;
 
-  const formatTick = (n: number) =>
-    Number.isInteger(n) ? n.toString() : n.toFixed(1);
+  const formatTick = (n: number) => (Number.isInteger(n) ? n.toString() : n.toFixed(1));
 
+  // ── JSX identik 100% dengan kode asli ────────────────────────────────────
   return (
     <div className="flex flex-col flex-1 min-w-0">
       <h2 className="text-[18px] font-bold text-[#1B1C1F] mb-4">Trend Harsat Utama</h2>
@@ -154,10 +155,7 @@ export default function TrendHarsatUtama() {
         ) : (
           <>
             {tooltip.visible && (
-              <div
-                className="absolute z-50 pointer-events-none"
-                style={{ left: tooltip.x + 14, top: tooltip.y - 56 }}
-              >
+              <div className="absolute z-50 pointer-events-none" style={{ left: tooltip.x + 14, top: tooltip.y - 56 }}>
                 <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 min-w-30">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tooltip.color }} />
@@ -165,9 +163,7 @@ export default function TrendHarsatUtama() {
                       {tooltip.category} ({tooltip.year})
                     </p>
                   </div>
-                  <span className="text-[18px] font-bold text-gray-900">
-                    {formatTick(tooltip.value)} M
-                  </span>
+                  <span className="text-[18px] font-bold text-gray-900">{formatTick(tooltip.value)} M</span>
                 </div>
               </div>
             )}
@@ -204,21 +200,10 @@ export default function TrendHarsatUtama() {
                     ))}
                   </div>
 
-                  <svg
-                    className="absolute inset-0 w-full h-full"
-                    viewBox={`0 0 ${svgW} ${svgH}`}
-                    preserveAspectRatio="none"
-                  >
+                  <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none">
                     <defs>
                       {CATEGORIES.map((cat) => (
-                        <linearGradient
-                          key={cat.key}
-                          id={`grad-${cat.key}`}
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
+                        <linearGradient key={cat.key} id={`grad-${cat.key}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor={cat.color} stopOpacity="0.3" />
                           <stop offset="100%" stopColor={cat.color} stopOpacity="0.02" />
                         </linearGradient>
@@ -234,14 +219,7 @@ export default function TrendHarsatUtama() {
                       return (
                         <g key={cat.key}>
                           <path d={areaPath} fill={`url(#grad-${cat.key})`} />
-                          <path
-                            d={linePath}
-                            fill="none"
-                            stroke={cat.color}
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
+                          <path d={linePath} fill="none" stroke={cat.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                           <path
                             d={linePath}
                             fill="none"

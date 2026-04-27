@@ -30,6 +30,7 @@ import type {
 } from "@/types/project";
 import { getToken, clearToken } from "@/lib/auth";
 import { Material, MaterialFilterOptionsResponse, MaterialListResponse } from "@/types/material";
+import { DashboardApiResponse } from "@/types/dashboard";
 
 type UploadRequestError = Error & {
   responseData?: UploadResponse;
@@ -229,6 +230,10 @@ export const projectApi = {
 
   getCpi: (division: string): Promise<ProjectCpiResponse> => api.get(`/projects/${division.toLowerCase()}/cpi`).then((r) => r.data),
   getSpi: (division: string): Promise<ProjectSpiResponse> => api.get(`/projects/${division.toLowerCase()}/spi`).then((r) => r.data),
+};
+
+export const dashboardApi = {
+  getDashboard: (): Promise<DashboardApiResponse> => api.get("/dashboard").then((r) => r.data),
 };
 
 export type DashboardExportResponse = {
