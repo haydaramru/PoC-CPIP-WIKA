@@ -1,35 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CaretDownIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { projectApi } from "@/lib/api";
-import type { FilterOptionsResponse } from "@/types/project";
+import type { DashboardFilterOptions } from "@/types/dashboard";
+import type { ActiveFilters } from "@/components/dashboard/DashboardSummary";
 
 type FilterState = {
   sbu: string;
   owner: string;
   contract: string;
   partnership: string;
+  division: string;
+  year: string;
+  location: string;
+  funding_source: string;
 };
 
-const EMPTY_FILTERS: FilterState = { sbu: "", owner: "", contract: "", partnership: "" };
+const EMPTY_FILTERS: FilterState = {
+  sbu: "",
+  owner: "",
+  contract: "",
+  partnership: "",
+  division: "",
+  year: "",
+  location: "",
+  funding_source: "",
+};
 
 interface QuickFilterPreviewProps {
-  onSearch: (filters: FilterState) => void;
+  filterOptions: DashboardFilterOptions; // ← dari parent (dashboardApi), bukan fetch sendiri
+  onSearch: (filters: ActiveFilters) => void;
   onReset: () => void;
   onExport?: () => void;
 }
 
-export default function QuickFilterPreview({ onSearch, onReset, onExport }: QuickFilterPreviewProps) {
+export default function QuickFilterPreview({ filterOptions, onSearch, onReset, onExport }: QuickFilterPreviewProps) {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [options, setOptions] = useState<FilterOptionsResponse | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    projectApi.filterOptions().then(setOptions).catch(console.error);
-  }, []);
 
   const updateFilter = (key: keyof FilterState, value: string) => setFilters((prev) => ({ ...prev, [key]: value }));
 
@@ -61,14 +70,27 @@ export default function QuickFilterPreview({ onSearch, onReset, onExport }: Quic
       if (value) params.set(key, value);
     });
     router.push(`?${params.toString()}`);
-    onSearch(filters);
+    onSearch({
+      sbu: filters.sbu,
+      owner: filters.owner,
+      contract_type: filters.contract,
+      partnership: filters.partnership,
+      division: filters.division,
+      year: filters.year,
+      location: filters.location,
+      funding_source: filters.funding_source,
+    });
   };
 
-  const filterDefs: { key: keyof FilterState; label: string; optionKey: keyof FilterOptionsResponse }[] = [
-    { key: "sbu", label: "SBU", optionKey: "sbu" },
-    { key: "owner", label: "Owner", optionKey: "owner" },
-    { key: "contract", label: "Contract", optionKey: "contract_type" },
-    { key: "partnership", label: "Partnership", optionKey: "partnership" },
+  const yearOptions = (filterOptions.year ?? []).map((y) => String(y));
+
+  const filterDefs: { key: keyof FilterState; label: string; options: string[] }[] = [
+    { key: "sbu", label: "SBU", options: filterOptions.sbu ?? [] },
+    { key: "owner", label: "Owner", options: filterOptions.owner ?? [] },
+    { key: "contract", label: "Contract", options: filterOptions.contract_type ?? [] },
+    { key: "partnership", label: "Partnership", options: filterOptions.partnership ?? [] },
+    { key: "division", label: "Division", options: filterOptions.division ?? [] },
+    { key: "year", label: "Year", options: yearOptions },
   ];
 
   return (
@@ -99,13 +121,13 @@ export default function QuickFilterPreview({ onSearch, onReset, onExport }: Quic
       </div>
 
       <div className="flex items-center gap-4 mb-4">
-        {filterDefs.map(({ key, label, optionKey }) => (
+        {filterDefs.map(({ key, label, options }) => (
           <FilterPill
             key={key}
             label={label}
             value={filters[key]}
             placeholder={`Select ${label}`}
-            options={(options?.[optionKey] as string[]) ?? []}
+            options={options}
             onChange={(v) => updateFilter(key, v)}
           />
         ))}

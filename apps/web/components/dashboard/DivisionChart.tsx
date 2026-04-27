@@ -4,10 +4,10 @@ import { ReadCvLogoIcon, MoneyWavyIcon, CalendarBlankIcon } from "@phosphor-icon
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { formatKpi } from "@/lib/utils";
-import type { SummaryResponse } from "@/types/project";
+import type { DashboardSummaryData } from "@/types/dashboard";
 
 type Props = {
-  data: SummaryResponse;
+  data: DashboardSummaryData; // ← satu-satunya perubahan dari SummaryResponse
 };
 
 function MiniKpiCard({ label, value, sub, icon: Icon }: { label: string; value: string; sub: string; icon: React.ElementType }) {
@@ -166,16 +166,13 @@ export default function DivisionChart({ data }: Props) {
         >
           {divisions.map(([division, divData]) => (
             <div key={division}>
-              {/* <p className="text-[12px] font-semibold text-gray-500 mb-2">{division}</p> */}
               <div className="grid grid-cols-2 gap-4.5 w-full">
                 <div onClick={() => router.push(`/projects/cpi/${division.toLowerCase()}`)} className="cursor-pointer group">
                   <MiniKpiCard label="Cost Performance Index" value={formatKpi(divData.avg_cpi)} sub={division} icon={MoneyWavyIcon} />
-                  {/* Tooltip kecil opsional untuk UX */}
                   <div className="hidden group-hover:block text-[10px] text-blue-600 font-medium px-2">Click to see detail →</div>
                 </div>
                 <div onClick={() => router.push(`/projects/spi/${division.toLowerCase()}`)} className="cursor-pointer group">
                   <MiniKpiCard label="Schedule Performance Index" value={formatKpi(divData.avg_spi)} sub={division} icon={CalendarBlankIcon} />
-                  {/* Tooltip kecil opsional untuk UX */}
                   <div className="hidden group-hover:block text-[10px] text-blue-600 font-medium px-2">Click to see detail →</div>
                 </div>
               </div>

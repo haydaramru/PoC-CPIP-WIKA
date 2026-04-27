@@ -1,21 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { projectApi } from "@/lib/api";
-import type { SbuDistributionItem } from "@/types/project";
+import type { DashboardApiResponse } from "@/types/dashboard";
+
+type SbuDistributionItem = DashboardApiResponse["sbu_distribution"][number];
+
+interface Props {
+  sbuDistribution: SbuDistributionItem[]; // ← dari parent (dashboardApi), bukan fetch sendiri
+}
+
 const COLORS = ["#7DBDB4", "#4EA5DA", "#3573B3", "#F4A261", "#E76F51", "#2A9D8F"];
 
-export default function SebaranSBUChart() {
-  const [segments, setSegments] = useState<SbuDistributionItem[]>([]);
-
-  useEffect(() => {
-    projectApi
-      .sbuDistribution()
-      .then((res) => {
-        if (res.data.length > 0) setSegments(res.data);
-      })
-      .catch(console.error);
-  }, []);
+export default function SebaranSBUChart({ sbuDistribution }: Props) {
+  const segments = sbuDistribution;
 
   if (segments.length === 0) {
     return (

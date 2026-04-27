@@ -12,13 +12,8 @@ import {
   CaretDownIcon,
 } from "@phosphor-icons/react";
 import { formatKpi } from "@/lib/utils";
-import type { SummaryResponse, DashboardFilters } from "@/types/project";
+import type { DashboardSummaryData } from "@/types/dashboard";
 
-const DIVISIONS = [
-  { v: "", l: "All" },
-  { v: "Infrastructure", l: "Infrastructure" },
-  { v: "Building", l: "Building" },
-];
 const CONTRACTS = [
   { v: "", l: "All" },
   { v: "0-500", l: "< 500 M" },
@@ -31,16 +26,28 @@ const YEARS = [
   { v: "2026", l: "2026" },
 ];
 
+export type DashboardFilters = {
+  division: string;
+  contractRange: string;
+  year: string;
+};
+
 type Props = {
-  data: SummaryResponse;
+  data: DashboardSummaryData;
   filters: DashboardFilters;
+  divisionOptions: string[];
   onChange: (filters: DashboardFilters) => void;
 };
 
-export default function KpiCards({ data, filters, onChange }: Props) {
+export default function KpiCards({ data, filters, divisionOptions, onChange }: Props) {
   const updateFilter = (key: keyof DashboardFilters, value: string) => {
     onChange({ ...filters, [key]: value });
   };
+
+  const divisionOptionItems = [
+    { v: "", l: "All" },
+    ...divisionOptions.filter((option) => option && option.trim() !== "").map((option) => ({ v: option, l: option })),
+  ];
 
   return (
     <div className="flex flex-col bg-white w-full" style={{ padding: "18px 32px" }}>
@@ -55,7 +62,7 @@ export default function KpiCards({ data, filters, onChange }: Props) {
               gap: "16px",
             }}
           >
-            <FilterSelect label="Division" value={filters.division} options={DIVISIONS} onChange={(v) => updateFilter("division", v)} />
+            <FilterSelect label="Division" value={filters.division} options={divisionOptionItems} onChange={(v) => updateFilter("division", v)} />
             <FilterSelect
               label="Contract Value"
               value={filters.contractRange}

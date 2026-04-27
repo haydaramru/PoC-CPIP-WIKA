@@ -11,7 +11,6 @@ import { formatCurrency } from "@/lib/utils";
 
 function formatSatuan(s: string | null | undefined): React.ReactNode {
   if (!s) return "-";
-  // Split on digit sequences: "m2" → ["m", "2"], "cm3" → ["cm", "3"]
   const parts = s.split(/(\d+)/);
   return parts.map((part, i) => (/^\d+$/.test(part) ? <sup key={i}>{part}</sup> : part));
 }
