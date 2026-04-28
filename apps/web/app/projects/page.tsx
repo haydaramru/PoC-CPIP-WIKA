@@ -137,19 +137,79 @@ const FILTER_GRID: {
   optionKey?: keyof FilterOptionsResponse;
   placeholder?: string;
 }[] = [
-  { key: "project_name", label: "Project Name", placeholder: "Input Project Name" },
-  { key: "contract_type", label: "Contract Pricing Type", optionKey: "contract_type", placeholder: "Select Contract Pricing Type" },
-  { key: "consultant_name", label: "Project Consultant", placeholder: "Input Project Consultant" },
-  { key: "project_code", label: "Profit Center Code /  Internal SPK Code", optionKey: "project_code", placeholder: "Select Code" },
-  { key: "sbu", label: "SBU Project", optionKey: "sbu", placeholder: "Select SBU Project" },
-  { key: "location", label: "Location", placeholder: "Input Location" },
-  { key: "owner", label: "Project Owner (Name & Category)", optionKey: "owner", placeholder: "Select Project Owner" },
-  { key: "payment_method", label: "Payment Method", optionKey: "payment_method", placeholder: "Select Payment Method" },
-  { key: "partnership", label: "Partnership Type", optionKey: "partnership", placeholder: "Select Partnership Type" },
-  { key: "funding_source", label: "Funding Source", optionKey: "funding_source", placeholder: "Select Funding Source" },
-  { key: "planned_duration", label: "Project Duration (Months)", placeholder: "e.g 12 months" },
-  { key: "partner_name", label: "Partnership Name", placeholder: "Enter Partnership Name" },
-  { key: "type_of_contract", label: "Contract Method", optionKey: "type_of_contract" as any, placeholder: "Select Contract Method" },
+  {
+    key: "project_name",
+    label: "Project Name",
+    placeholder: "Input Project Name",
+  },
+  {
+    key: "contract_type",
+    label: "Contract Pricing Type",
+    optionKey: "contract_type",
+    placeholder: "Select Contract Pricing Type",
+  },
+  {
+    key: "consultant_name",
+    label: "Project Consultant",
+    placeholder: "Input Project Consultant",
+  },
+  {
+    key: "project_code",
+    label: "Profit Center Code / Internal SPK Code",
+    optionKey: "project_code",
+    placeholder: "Select Code",
+  },
+  {
+    key: "sbu",
+    label: "SBU Project",
+    optionKey: "sbu",
+    placeholder: "Select SBU Project",
+  },
+  {
+    key: "location",
+    label: "Location",
+    placeholder: "Input Location",
+  },
+  {
+    key: "owner",
+    label: "Project Owner (Name & Category)",
+    optionKey: "owner",
+    placeholder: "Select Project Owner",
+  },
+  {
+    key: "payment_method",
+    label: "Payment Method",
+    optionKey: "payment_method",
+    placeholder: "Select Payment Method",
+  },
+  {
+    key: "partnership",
+    label: "Partnership Type",
+    optionKey: "partnership",
+    placeholder: "Select Partnership Type",
+  },
+  {
+    key: "funding_source",
+    label: "Funding Source",
+    optionKey: "funding_source",
+    placeholder: "Select Funding Source",
+  },
+  {
+    key: "planned_duration",
+    label: "Project Duration (Months)",
+    placeholder: "e.g 12 months",
+  },
+  {
+    key: "partner_name",
+    label: "Partnership Name",
+    placeholder: "Enter Partnership Name",
+  },
+  {
+    key: "type_of_contract",
+    label: "Contract Method",
+    optionKey: "type_of_contract" as any,
+    placeholder: "Select Contract Method",
+  },
 ];
 
 export default function ProjectsPage() {
@@ -175,16 +235,79 @@ export default function ProjectsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const getMatchedProjects = useCallback(() => {
+    const nameFilter = filters["project_name"] ?? "";
+    const codeFilter = filters["project_code"] ?? "";
+
+    if (!nameFilter && !codeFilter) return allProjects;
+
+    return allProjects.filter((p) => {
+      const matchName = nameFilter
+        ? String(p.project_name ?? "")
+            .toLowerCase()
+            .includes(nameFilter.toLowerCase())
+        : true;
+      const matchCode = codeFilter
+        ? String(p.project_code ?? "")
+            .toLowerCase()
+            .includes(codeFilter.toLowerCase())
+        : true;
+      return matchName && matchCode;
+    });
+  }, [allProjects, filters]);
+
+  useEffect(() => {
+    const nameFilter = filters["project_name"] ?? "";
+    if (!nameFilter) return;
+
+    const matched = allProjects.filter((p) =>
+      String(p.project_name ?? "")
+        .toLowerCase()
+        .includes(nameFilter.toLowerCase()),
+    );
+    if (matched.length !== 1) return;
+
+    const project = matched[0];
+    setFilters(() => {
+      const updated: Record<string, string> = {};
+      FILTER_GRID.forEach(({ key }) => {
+        const val = project[key];
+        updated[key as string] = val !== null && val !== undefined && String(val).trim() !== "" ? String(val) : "";
+      });
+      return updated;
+    });
+  }, [filters["project_name"]]);
+
+  useEffect(() => {
+    const codeFilter = filters["project_code"] ?? "";
+    if (!codeFilter) return;
+
+    const matched = allProjects.filter((p) =>
+      String(p.project_code ?? "")
+        .toLowerCase()
+        .includes(codeFilter.toLowerCase()),
+    );
+    if (matched.length !== 1) return;
+
+    const project = matched[0];
+    setFilters(() => {
+      const updated: Record<string, string> = {};
+      FILTER_GRID.forEach(({ key }) => {
+        const val = project[key];
+        updated[key as string] = val !== null && val !== undefined && String(val).trim() !== "" ? String(val) : "";
+      });
+      return updated;
+    });
+  }, [filters["project_code"]]);
+
   const handleSearch = () => {
     setLoading(true);
 
     const filtered = allProjects.filter((project) => {
       return Object.entries(filters).every(([key, value]) => {
         if (!value) return true;
-
         const projectValue = project[key as keyof Project];
         if (projectValue === null || projectValue === undefined) return false;
-
         return String(projectValue).toLowerCase().includes(String(value).toLowerCase());
       });
     });
@@ -203,9 +326,7 @@ export default function ProjectsPage() {
 
   const handleSnackbarClose = useCallback(() => setSnackbar(false), []);
 
-  // --- FUNGSI CERDAS: Menarik data dari API Filter atau dari Tabel ---
   const getSuggestionsForField = (key: keyof Project, optionKey?: keyof FilterOptionsResponse): string[] => {
-    // 1. Coba cari di API Filter Options (untuk dropdown standar seperti division, sbu, owner)
     if (optionKey && filterOptions && filterOptions[optionKey]) {
       const options = filterOptions[optionKey];
       if (Array.isArray(options)) {
@@ -213,7 +334,6 @@ export default function ProjectsPage() {
       }
     }
 
-    // 2. Jika bukan dari API (misal nama proyek, lokasi, konsultan), ambil data unik dari data tabel
     if (allProjects.length > 0) {
       const uniqueValues = new Set(allProjects.map((p) => String(p[key] || "")).filter((val) => val.trim() !== ""));
       return Array.from(uniqueValues);
@@ -221,7 +341,6 @@ export default function ProjectsPage() {
 
     return [];
   };
-  // -------------------------------------------------------------------
 
   return (
     <div className="bg-white min-h-screen" style={{ padding: "24px 32px" }}>
@@ -231,8 +350,6 @@ export default function ProjectsPage() {
         {FILTER_GRID.map(({ key, label, optionKey, placeholder }) => (
           <div key={key}>
             <label className="text-[14px] font-semibold text-[#1B1C1F] mb-2 block">{label}</label>
-
-            {/* SELURUH FILTER SEKARANG MENGGUNAKAN AUTOCOMPLETE */}
             <AutocompleteInput
               value={filters[key as string] ?? ""}
               onChange={(val) => setFilters((prev) => ({ ...prev, [key as string]: val }))}
@@ -284,7 +401,7 @@ export default function ProjectsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {projects.map((project, idx) => (
+              {projects.map((project) => (
                 <tr key={project.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4 text-[14px] text-gray-600 font-medium">{project.project_code}</td>
                   <td className="px-4 py-4 text-[14px] font-semibold text-[#1B1C1F]">{project.project_name}</td>
