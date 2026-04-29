@@ -85,8 +85,8 @@ function useDynamicBreadcrumbs(pathname: string): BreadcrumbItem[] | null {
 
     const segments = pathname.replace("/projects/", "").split("/");
     const projectId = Number(segments[0]);
-    const tahapId = segments[1] ? Number(segments[1]) : null;
-    const itemId = segments[2] && segments[2] !== "hpp" && segments[2] !== "risk" ? Number(segments[2]) : null;
+    const tahapId = segments[1] && !isNaN(Number(segments[1])) ? Number(segments[1]) : null;
+    const itemId = segments[2] && segments[2] !== "hpp" && segments[2] !== "risks" && segments[2] !== "wbs" ? Number(segments[2]) : null;
     const lastSeg = segments[segments.length - 1];
 
     if (!projectId || isNaN(projectId)) {
@@ -121,7 +121,7 @@ function useDynamicBreadcrumbs(pathname: string): BreadcrumbItem[] | null {
           .periods(projectId)
           .then((res) => {
             const phase = res.data.phases?.find((p: any) => p.id === tahapId);
-            phaseName = phase?.name || `Phase #${tahapId}`;
+            phaseName = phase?.name_of_work_phase || `Phase #${tahapId}`;
           })
           .catch(() => {
             phaseName = `Phase #${tahapId}`;
@@ -144,9 +144,10 @@ function useDynamicBreadcrumbs(pathname: string): BreadcrumbItem[] | null {
     }
 
     Promise.all(fetches).then(() => {
+      // Always add Financial Summary with project name for project-related pages
       base.push({
-        Icon: FileTextIcon,
-        label: projectName,
+        Icon: MoneyWavyIcon,
+        label: `Financial Summary (${projectName})`,
         href: `/projects/${projectId}`,
       });
 
@@ -154,7 +155,7 @@ function useDynamicBreadcrumbs(pathname: string): BreadcrumbItem[] | null {
         base.push({
           Icon: TreeStructureIcon,
           label: phaseName,
-          href: `/projects/${projectId}/${tahapId}/biaya-langsung`,
+          href: `/projects/${projectId}/${tahapId}/direct-cost`,
         });
       }
 
@@ -162,14 +163,16 @@ function useDynamicBreadcrumbs(pathname: string): BreadcrumbItem[] | null {
         base.push({
           Icon: BuildingOfficeIcon,
           label: itemName,
-          href: `/projects/${projectId}/${tahapId}/biaya-langsung/${itemId}`,
+          href: `/projects/${projectId}/${tahapId}/indirect-cost-eval/${itemId}`,
         });
       }
 
       if (lastSeg === "hpp") {
         base.push({ Icon: FileTextIcon, label: "HPP & CPI Analysis" });
-      } else if (lastSeg === "risk") {
+      } else if (lastSeg === "risks") {
         base.push({ Icon: FileTextIcon, label: "Risk & Timeline" });
+      } else if (lastSeg === "wbs") {
+        base.push({ Icon: TreeStructureIcon, label: "WBS Overview" });
       }
 
       setItems(base);

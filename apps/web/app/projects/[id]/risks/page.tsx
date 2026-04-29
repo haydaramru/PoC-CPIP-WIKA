@@ -370,7 +370,7 @@ function DeleteModal({ risk, projectId, onClose, onSuccess }: { risk: ProjectRis
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function Level6Page() {
+export default function Level7Page() {
   const router = useRouter();
   const params = useParams();
   const projectId = Number(params.id);
@@ -413,7 +413,7 @@ export default function Level6Page() {
 
   return (
     <div className="bg-white min-h-screen" style={{ padding: "24px 32px" }}>
-      <PageHeader title="Level 6A Kamus Risiko (Historical Risk Register)" onExport={() => {}}>
+      <PageHeader title="Level 7A Kamus Risiko (Historical Risk Register)" onExport={() => {}}>
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 bg-blue-600 text-white text-[13px] font-bold rounded-lg px-4 h-[38px] hover:bg-blue-700 transition-colors"
@@ -485,7 +485,7 @@ export default function Level6Page() {
         </table>
       </div>
 
-      <h2 className="text-[18px] font-bold text-[#1B1C1F] mb-4">Level 6B Project Timeline</h2>
+      <h2 className="text-[18px] font-bold text-[#1B1C1F] mb-4">Level 7B Project Timeline</h2>
 
       {curve?.timeline ? (
         <div className="grid grid-cols-2 gap-6 mb-6">
