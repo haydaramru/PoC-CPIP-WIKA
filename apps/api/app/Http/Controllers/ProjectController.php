@@ -245,6 +245,50 @@ class ProjectController extends Controller
         return response()->json(['data' => $project]);
     }
 
+    public function financial(Project $project): JsonResponse
+    {
+        $summary = $project->financialSummary;
+        $value = fn(string $field): float => $summary && $summary->{$field} !== null
+            ? (float) $summary->{$field}
+            : 0.0;
+
+        return response()->json([
+            'data' => [
+                'project_name'  => $project->project_name,
+                'sbu'           => $project->sbu,
+                'owner'         => $project->owner,
+                'contract_type' => $project->contract_type,
+
+                'penjualan' => $value('penjualan'),
+
+                'biaya_langsung' => [
+                    'material' => $value('material'),
+                    'upah'     => $value('upah'),
+                    'alat'     => $value('alat'),
+                    'subkon'   => $value('subkon'),
+                ],
+
+                'biaya_tak_langsung' => [
+                    'fasilitas'   => $value('fasilitas'),
+                    'sekretariat' => $value('sekretariat'),
+                    'kendaraan'   => $value('kendaraan'),
+                    'personalia'  => $value('personalia'),
+                    'keuangan'    => $value('keuangan'),
+                    'umum'        => $value('umum'),
+                ],
+
+                'biaya_lain_lain' => [
+                    'biaya_pemeliharaan' => $value('biaya_pemeliharaan'),
+                    'risiko'             => $value('risiko'),
+                ],
+
+                'beban_pph_final' => $value('beban_pph_final'),
+                'laba_kotor'      => $value('laba_kotor'),
+                'lsp'             => $value('lsp'),
+            ],
+        ]);
+    }
+
 
     public function store(ProjectRequest $request): JsonResponse
     {

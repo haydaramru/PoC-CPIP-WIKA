@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Services\KpiCalculatorService;
 
 class Project extends Model
@@ -230,6 +231,11 @@ class Project extends Model
     public function wbsPhases(): HasMany
     {
         return $this->hasMany(ProjectWbs::class);
+    }
+
+    public function financialSummary(): HasOne
+    {
+        return $this->hasOne(ProjectFinancialSummary::class);
     }
 
     /**
