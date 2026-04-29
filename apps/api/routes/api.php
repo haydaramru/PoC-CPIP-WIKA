@@ -55,6 +55,7 @@ Route::get('/harsat/trend',                        [HarsatController::class, 'tr
 // Protected read endpoints (scoped to authenticated user)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/export-dashboard',           [ProjectController::class, 'exportDashboard']);
+    Route::get('/projects/{project}/profit-loss',      [ProjectController::class, 'financial']);
 
     Route::get('/projects/{project}/wbs-phases',                    [ProjectWbsController::class, 'index']);
     Route::get('/projects/{project}/wbs-phases/{wbsModel}',        [ProjectWbsController::class, 'show']);
