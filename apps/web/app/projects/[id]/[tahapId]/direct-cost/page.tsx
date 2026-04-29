@@ -47,7 +47,7 @@ export default function Level4Page() {
   return (
     <div className="bg-white min-h-screen" style={{ padding: "24px 32px" }}>
       <PageHeader
-        title={`Level 4 Harsat Per Sumber Daya - Tahap ${data.tahap}`}
+        title={`Level 5 Harsat Per Sumber Daya - Tahap ${data.tahap}`}
         pills={[
           { label: "Tahap", value: data.tahap },
           { label: "Realisasi Biaya", value: formatCurrency(data.rabInternal) },
@@ -83,7 +83,7 @@ export default function Level4Page() {
                 <td className="px-4 py-4 text-[14px] text-gray-700">{formatCurrency(item.totalBiaya)}</td>
                 <td className="px-4 py-4">
                   <button
-                    onClick={() => router.push(`/projects/${projectId}/${tahapId}/biaya-langsung/${item.id}`)}
+                    onClick={() => router.push(`/projects/${projectId}/${tahapId}/direct-cost/${item.id}`)}
                     className="flex items-center gap-1 text-primary-blue text-[13px] font-medium hover:underline"
                   >
                     Details <ArrowSquareOutIcon size={14} />
@@ -104,7 +104,7 @@ export default function Level4Page() {
         </table>
       </div>
 
-      <BackButton label="Back to Level 3" href={`/projects/${projectId}`} />
+      <BackButton label="Back to Level 4" href={`/projects/${projectId}/wbs`} />
     </div>
   );
 }

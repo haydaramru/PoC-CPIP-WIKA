@@ -247,7 +247,7 @@ export interface SummaryResponse {
 // Level 3 — project phases
 export interface ProjectPhase {
   id: number;
-  name: string;
+  name_of_work_phase: string;
   bqExternal: number;
   rabInternal: number;
   realisasi: number;
@@ -496,6 +496,44 @@ export interface InsightResponse {
     level: InsightLevel;
     text: string;
   };
+}
+
+export interface FinancialResponse {
+  data: FinancialData;
+}
+
+export interface FinancialData {
+  project_name: string;
+  sbu?: string;
+  owner?: string;
+  contract_type?: string;
+
+  penjualan: number;
+
+  biaya_langsung: {
+    material: number;
+    upah: number;
+    alat: number;
+    subkon: number;
+  };
+
+  biaya_tak_langsung: {
+    fasilitas: number;
+    sekretariat: number;
+    kendaraan: number;
+    personalia: number;
+    keuangan: number;
+    umum: number;
+  };
+
+  biaya_lain_lain: {
+    biaya_pemeliharaan: number;
+    risiko: number;
+  };
+
+  beban_pph_final: number;
+  laba_kotor: number;
+  lsp: number;
 }
 
 export interface IngestionLog {

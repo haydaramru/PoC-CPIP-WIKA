@@ -95,7 +95,7 @@ export default function Level5Page() {
   return (
     <div className="bg-white min-h-screen" style={{ padding: "24px 32px" }}>
       <PageHeader
-        title={`Level 5 Data Monitoring Kontrak Vendor - ${item.item_name}`}
+        title={`Level 6 Data Monitoring Kontrak Vendor - ${item.item_name}`}
         pills={[
           ...(item.tahap ? [{ label: "Tahap", value: item.tahap }] : []),
           { label: "Item", value: item.item_name },
@@ -164,7 +164,7 @@ export default function Level5Page() {
       )}
 
       <div className="flex items-center justify-between border-t border-gray-100 pt-6">
-        <BackButton label="Kembali ke Level 4" href={`/projects/${params.id}/${params.tahapId}/biaya-langsung`} />
+        <BackButton label="Kembali ke Level 5" href={`/projects/${params.id}/${params.tahapId}/direct-cost`} />
         <ActionButton label="Cek Risk & Timeline" href={`/projects/${params.id}/risks`} />
       </div>
     </div>

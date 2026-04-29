@@ -27,6 +27,7 @@ import type {
   ProjectCpiResponse,
   ProjectSpiResponse,
   RiskPayload,
+  FinancialResponse,
 } from "@/types/project";
 import { getToken, clearToken } from "@/lib/auth";
 import { Material, MaterialFilterOptionsResponse, MaterialListResponse } from "@/types/material";
@@ -115,6 +116,8 @@ export const projectApi = {
   detail: (id: number): Promise<{ data: Project }> => api.get(`/projects/${id}`).then((r) => r.data),
 
   insight: (id: number): Promise<InsightResponse> => api.get(`/projects/${id}/insight`).then((r) => r.data),
+
+  financial: (id: number): Promise<FinancialResponse> => api.get(`/projects/${id}/financial`).then((r) => r.data),
 
   periods: (id: number): Promise<ProjectPhaseListResponse> => api.get(`/projects/${id}/wbs-phases`).then((r) => r.data),
 
