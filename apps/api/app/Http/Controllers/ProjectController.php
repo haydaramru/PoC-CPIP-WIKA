@@ -247,9 +247,16 @@ class ProjectController extends Controller
 
     public function financial(Project $project): JsonResponse
     {
-        $summary = $project->financialSummary;
-        $value = fn(string $field): float => $summary && $summary->{$field} !== null
-            ? (float) $summary->{$field}
+        $project->loadMissing([
+            'profitLoss',
+            'sales',
+            'directCost',
+            'indirectCost',
+            'otherCost',
+        ]);
+
+        $value = fn($record, string $field): float => $record && $record->{$field} !== null
+            ? (float) $record->{$field}
             : 0.0;
 
         return response()->json([
@@ -259,32 +266,32 @@ class ProjectController extends Controller
                 'owner'         => $project->owner,
                 'contract_type' => $project->contract_type,
 
-                'penjualan' => $value('penjualan'),
+                'penjualan' => $value($project->sales, 'penjualan'),
 
                 'biaya_langsung' => [
-                    'material' => $value('material'),
-                    'upah'     => $value('upah'),
-                    'alat'     => $value('alat'),
-                    'subkon'   => $value('subkon'),
+                    'material' => $value($project->directCost, 'material'),
+                    'upah'     => $value($project->directCost, 'upah'),
+                    'alat'     => $value($project->directCost, 'alat'),
+                    'subkon'   => $value($project->directCost, 'subkon'),
                 ],
 
                 'biaya_tak_langsung' => [
-                    'fasilitas'   => $value('fasilitas'),
-                    'sekretariat' => $value('sekretariat'),
-                    'kendaraan'   => $value('kendaraan'),
-                    'personalia'  => $value('personalia'),
-                    'keuangan'    => $value('keuangan'),
-                    'umum'        => $value('umum'),
+                    'fasilitas'   => $value($project->indirectCost, 'fasilitas'),
+                    'sekretariat' => $value($project->indirectCost, 'sekretariat'),
+                    'kendaraan'   => $value($project->indirectCost, 'kendaraan'),
+                    'personalia'  => $value($project->indirectCost, 'personalia'),
+                    'keuangan'    => $value($project->indirectCost, 'keuangan'),
+                    'umum'        => $value($project->indirectCost, 'umum'),
                 ],
 
                 'biaya_lain_lain' => [
-                    'biaya_pemeliharaan' => $value('biaya_pemeliharaan'),
-                    'risiko'             => $value('risiko'),
+                    'biaya_pemeliharaan' => $value($project->otherCost, 'biaya_pemeliharaan'),
+                    'risiko'             => $value($project->otherCost, 'risiko'),
                 ],
 
-                'beban_pph_final' => $value('beban_pph_final'),
-                'laba_kotor'      => $value('laba_kotor'),
-                'lsp'             => $value('lsp'),
+                'beban_pph_final' => $value($project->profitLoss, 'beban_pph_final'),
+                'laba_kotor'      => $value($project->profitLoss, 'laba_kotor'),
+                'lsp'             => $value($project->profitLoss, 'lsp'),
             ],
         ]);
     }
