@@ -233,9 +233,29 @@ class Project extends Model
         return $this->hasMany(ProjectWbs::class);
     }
 
-    public function financialSummary(): HasOne
+    public function profitLoss(): HasOne
     {
-        return $this->hasOne(ProjectFinancialSummary::class);
+        return $this->hasOne(ProjectProfitLoss::class);
+    }
+
+    public function sales(): HasOne
+    {
+        return $this->hasOne(ProjectSale::class);
+    }
+
+    public function directCost(): HasOne
+    {
+        return $this->hasOne(ProjectDirectCost::class);
+    }
+
+    public function indirectCost(): HasOne
+    {
+        return $this->hasOne(ProjectIndirectCost::class);
+    }
+
+    public function otherCost(): HasOne
+    {
+        return $this->hasOne(ProjectOtherCost::class);
     }
 
     /**

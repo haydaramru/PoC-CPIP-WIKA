@@ -11,6 +11,7 @@ use App\Http\Controllers\ProgressCurveController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectWbsController;
 use App\Http\Controllers\ProjectRiskController;
+use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\WorkItemController;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +70,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Database Material page, aggregates across all projects
     Route::get('/materials',                                      [MaterialController::class, 'index']);
     Route::get('/materials/filter-options',                       [MaterialController::class, 'filterOptions']);
+    Route::get('/resources',                                      [ResourceController::class, 'index']);
+    Route::get('/resources/filter-options',                       [ResourceController::class, 'filterOptions']);
 
     Route::get('/work-items/{workItem}/materials',                [MaterialLogController::class, 'showByWorkItem']);
     Route::get('/work-items/{workItem}/equipment',                [EquipmentLogController::class, 'showByWorkItem']);

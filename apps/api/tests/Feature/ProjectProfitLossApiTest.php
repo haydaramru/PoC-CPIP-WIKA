@@ -3,12 +3,16 @@
 namespace Tests\Feature;
 
 use App\Models\Project;
-use App\Models\ProjectFinancialSummary;
+use App\Models\ProjectDirectCost;
+use App\Models\ProjectIndirectCost;
+use App\Models\ProjectOtherCost;
+use App\Models\ProjectProfitLoss;
+use App\Models\ProjectSale;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-class ProjectFinancialSummaryApiTest extends TestCase
+class ProjectProfitLossApiTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -21,11 +25,11 @@ class ProjectFinancialSummaryApiTest extends TestCase
     private function makeProject(array $overrides = []): Project
     {
         return Project::create(array_merge([
-            'project_code' => 'FIN-01',
-            'project_name' => 'Financial Project',
+            'project_code' => 'PL-01',
+            'project_name' => 'Profit Loss Project',
             'division' => 'Infrastructure',
-            'sbu' => 'SBU Finance',
-            'owner' => 'Owner Finance',
+            'sbu' => 'SBU Profit Loss',
+            'owner' => 'Owner Profit Loss',
             'contract_type' => 'Lumpsum',
             'contract_value' => 500,
             'planned_cost' => 400,
@@ -37,36 +41,52 @@ class ProjectFinancialSummaryApiTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_project_financial_summary_for_level_three(): void
+    public function it_returns_project_profit_loss_for_level_three(): void
     {
         $project = $this->makeProject();
 
-        ProjectFinancialSummary::create([
+        ProjectProfitLoss::create([
+            'project_id' => $project->id,
+            'beban_pph_final' => 25,
+            'laba_kotor' => 590,
+            'lsp' => 5,
+        ]);
+
+        ProjectSale::create([
             'project_id' => $project->id,
             'penjualan' => 1000,
+        ]);
+
+        ProjectDirectCost::create([
+            'project_id' => $project->id,
             'material' => 100,
             'upah' => 80,
             'alat' => 60,
             'subkon' => 40,
+        ]);
+
+        ProjectIndirectCost::create([
+            'project_id' => $project->id,
             'fasilitas' => 30,
             'sekretariat' => 20,
             'kendaraan' => 10,
             'personalia' => 15,
             'keuangan' => 12,
             'umum' => 8,
+        ]);
+
+        ProjectOtherCost::create([
+            'project_id' => $project->id,
             'biaya_pemeliharaan' => 6,
             'risiko' => 4,
-            'beban_pph_final' => 25,
-            'laba_kotor' => 590,
-            'lsp' => 5,
         ]);
 
         $response = $this->getJson("/api/projects/{$project->id}/profit-loss");
 
         $response->assertOk()
-            ->assertJsonPath('data.project_name', 'Financial Project')
-            ->assertJsonPath('data.sbu', 'SBU Finance')
-            ->assertJsonPath('data.owner', 'Owner Finance')
+            ->assertJsonPath('data.project_name', 'Profit Loss Project')
+            ->assertJsonPath('data.sbu', 'SBU Profit Loss')
+            ->assertJsonPath('data.owner', 'Owner Profit Loss')
             ->assertJsonPath('data.contract_type', 'Lumpsum')
             ->assertJsonPath('data.penjualan', 1000)
             ->assertJsonPath('data.biaya_langsung.material', 100)
@@ -87,14 +107,14 @@ class ProjectFinancialSummaryApiTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_zeroes_when_project_has_no_financial_summary(): void
+    public function it_returns_zeroes_when_project_has_no_profit_loss_rows(): void
     {
         $project = $this->makeProject();
 
         $response = $this->getJson("/api/projects/{$project->id}/profit-loss");
 
         $response->assertOk()
-            ->assertJsonPath('data.project_name', 'Financial Project')
+            ->assertJsonPath('data.project_name', 'Profit Loss Project')
             ->assertJsonPath('data.penjualan', 0)
             ->assertJsonPath('data.biaya_langsung.material', 0)
             ->assertJsonPath('data.biaya_langsung.upah', 0)
@@ -114,19 +134,26 @@ class ProjectFinancialSummaryApiTest extends TestCase
     }
 
     #[Test]
-    public function deleting_a_project_cascades_its_financial_summary(): void
+    public function deleting_a_project_cascades_its_profit_loss_rows(): void
     {
         $project = $this->makeProject();
 
-        ProjectFinancialSummary::create([
-            'project_id' => $project->id,
-            'penjualan' => 1000,
-        ]);
+        ProjectProfitLoss::create(['project_id' => $project->id, 'laba_kotor' => 590]);
+        ProjectSale::create(['project_id' => $project->id, 'penjualan' => 1000]);
+        ProjectDirectCost::create(['project_id' => $project->id, 'material' => 100]);
+        ProjectIndirectCost::create(['project_id' => $project->id, 'fasilitas' => 30]);
+        ProjectOtherCost::create(['project_id' => $project->id, 'risiko' => 4]);
 
         $project->delete();
 
-        $this->assertDatabaseMissing('project_financial_summary', [
-            'project_id' => $project->id,
-        ]);
+        foreach ([
+            'project_profit_loss',
+            'project_sales',
+            'project_direct_cost',
+            'project_indirect_cost',
+            'project_other_cost',
+        ] as $table) {
+            $this->assertDatabaseMissing($table, ['project_id' => $project->id]);
+        }
     }
 }
