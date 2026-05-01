@@ -117,7 +117,7 @@ export const projectApi = {
 
   insight: (id: number): Promise<InsightResponse> => api.get(`/projects/${id}/insight`).then((r) => r.data),
 
-  financial: (id: number): Promise<FinancialResponse> => api.get(`/projects/${id}/financial`).then((r) => r.data),
+  financial: (id: number): Promise<FinancialResponse> => api.get(`/projects/${id}/profit-loss`).then((r) => r.data),
 
   periods: (id: number): Promise<ProjectPhaseListResponse> => api.get(`/projects/${id}/wbs-phases`).then((r) => r.data),
 
