@@ -6,83 +6,103 @@ use Illuminate\Support\Facades\DB;
 
 class HarsatTrendService
 {
+    private const PALETTE = [
+        '#E11D48',
+        '#16A34A',
+        '#EAB308',
+        '#2563EB',
+        '#9333EA',
+        '#0891B2',
+        '#F97316',
+        '#64748B',
+    ];
+
+    private const MAX_CATEGORIES = 5;
+
     public function getTrendData(): ?array
     {
-        $buckets = [
-            ['key' => 'besi',     'label' => 'Besi',     'color' => '#E11D48', 'keywords' => ['besi', 'tulangan', 'steel']],
-            ['key' => 'beton',    'label' => 'Beton',    'color' => '#16A34A', 'keywords' => ['beton', 'concrete', 'lean', 'k-350', 'k-125']],
-            ['key' => 'jembatan', 'label' => 'Jembatan', 'color' => '#EAB308', 'keywords' => ['girder', 'pier', 'abutment', 'bearing', 'bekisting', 'bored pile', 'scaffolding', 'aspal', 'overlay', 'railing', 'deck', 'lantai jembatan']],
-        ];
-
-        $rows = DB::table('project_material_logs')
-            ->select('material_type', 'tahun_perolehan', 'total_tagihan', 'harga_satuan', 'qty')
-            ->whereNotNull('material_type')
-            ->whereNotNull('tahun_perolehan')
-            ->where('is_discount', false)
+        $rows = DB::table('project_work_items as pwi')
+            ->join('project_wbs as pw', 'pw.id', '=', 'pwi.period_id')
+            ->join('projects as p', 'p.id', '=', 'pw.project_id')
+            ->whereNotNull('pwi.id_material')
+            ->whereNotNull('pwi.material_category')
+            ->where('pwi.material_category', '!=', '')
+            ->whereNotNull('p.project_year')
+            ->where('pwi.is_total_row', false)
+            ->select([
+                'pwi.material_category',
+                'p.project_year',
+                'pwi.harsat_internal',
+                'pwi.harsat_actual',
+                'pwi.volume',
+                'pwi.volume_actual',
+            ])
             ->get();
 
         if ($rows->isEmpty()) {
             return null;
         }
 
-        $classify = function (string $type) use ($buckets): ?string {
-            $lc = strtolower($type);
-            foreach ($buckets as $bucket) {
-                foreach ($bucket['keywords'] as $keyword) {
-                    if (str_contains($lc, $keyword)) {
-                        return $bucket['key'];
-                    }
-                }
-            }
-
-            return null;
-        };
-
-        $years = $rows->pluck('tahun_perolehan')
-            ->unique()
-            ->sort()
-            ->values()
-            ->map(fn($year) => (string) $year);
-
-        $accumulator = [];
-        foreach ($buckets as $bucket) {
-            $accumulator[$bucket['key']] = array_fill_keys($years->toArray(), 0.0);
-        }
+        $totalsByCategory = [];
+        $byYearCategory   = [];
+        $yearSet          = [];
 
         foreach ($rows as $row) {
-            $bucket = $classify((string) $row->material_type);
-            if ($bucket === null) {
+            $category = trim((string) $row->material_category);
+            if ($category === '') {
                 continue;
             }
 
-            $value = (float) ($row->total_tagihan ?? 0);
-            if ($value <= 0.0) {
-                $value = ((float) ($row->qty ?? 0)) * ((float) ($row->harga_satuan ?? 0));
-            }
+            $year = (string) $row->project_year;
 
+            $value = ((float) ($row->harsat_internal ?? 0)) * ((float) ($row->volume ?? 0));
+            if ($value <= 0.0) {
+                $value = ((float) ($row->harsat_actual ?? 0)) * ((float) ($row->volume_actual ?? 0));
+            }
             if ($value <= 0.0) {
                 continue;
             }
 
-            $accumulator[$bucket][(string) $row->tahun_perolehan] += $value;
+            $yearSet[$year] = true;
+            $totalsByCategory[$category] = ($totalsByCategory[$category] ?? 0.0) + $value;
+            $byYearCategory[$category][$year] = ($byYearCategory[$category][$year] ?? 0.0) + $value;
         }
 
-        $data = [];
-        foreach ($buckets as $bucket) {
-            $data[$bucket['key']] = $years->map(
-                fn($year) => round($accumulator[$bucket['key']][$year] / 1_000_000_000, 2)
-            )->values()->toArray();
+        if (empty($byYearCategory)) {
+            return null;
         }
 
-        $categories = array_map(
-            fn($bucket) => ['key' => $bucket['key'], 'label' => $bucket['label'], 'color' => $bucket['color']],
-            $buckets
-        );
+        arsort($totalsByCategory);
+        $topCategories = array_slice(array_keys($totalsByCategory), 0, self::MAX_CATEGORIES);
+
+        $years = array_keys($yearSet);
+        sort($years);
+
+        $categories = [];
+        $data       = [];
+        foreach ($topCategories as $i => $category) {
+            $key = $this->slug($category);
+            $categories[] = [
+                'key'   => $key,
+                'label' => $category,
+                'color' => self::PALETTE[$i % count(self::PALETTE)],
+            ];
+            $data[$key] = array_map(
+                fn($year) => round(($byYearCategory[$category][$year] ?? 0.0) / 1_000_000_000, 2),
+                $years
+            );
+        }
 
         return [
-            'years'      => $years->toArray(),
+            'years'      => array_map('strval', $years),
             'categories' => $categories,
             'data'       => $data,
         ];
+    }
+
+    private function slug(string $value): string
+    {
+        $slug = strtolower(preg_replace('/[^A-Za-z0-9]+/', '_', $value) ?? '');
+        return trim($slug, '_') ?: 'cat';
     }
 }
