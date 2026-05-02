@@ -129,8 +129,8 @@ export default function TrendHarsatUtama({ harsatTrend }: Props) {
       <h2 className="text-[18px] font-bold text-[#1B1C1F] mb-4">Trend Harsat Utama</h2>
 
       <Link
-        href="/data-management/material"
-        aria-label="Lihat Database Material"
+        href="/data-management/resource"
+        aria-label="Lihat Database Resource"
         ref={chartRef}
         className="relative block bg-white border border-gray-100 rounded-2xl cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue/40"
         style={{ height: "100%", padding: "24px 16px 30px 16px" }}

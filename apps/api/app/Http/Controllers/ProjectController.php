@@ -6,6 +6,8 @@ use App\Exceptions\ImportValidationException;
 use App\Http\Requests\ProjectRequest;
 use App\Http\Requests\UploadExcelRequest;
 use App\Services\AdaptiveWorkbookImport;
+use App\Services\EpcStandardImport;
+use App\Services\KpiCalculatorService;
 use App\Services\ProjectImport;
 use App\Models\IngestionFile;
 use App\Models\Project;
@@ -687,10 +689,15 @@ class ProjectController extends Controller
      */
     private function resolveImporter(string $filePath): object
     {
+        // Default: EPC standard multi-sheet workbook.
+        if (EpcStandardImport::supports($filePath)) {
+            return new EpcStandardImport();
+        }
+
         $spreadsheet = IOFactory::load($filePath);
         $sheetCount  = $spreadsheet->getSheetCount();
 
-        // Pola C: multi-sheet files → PolaCImport (structured multi-sheet parser)
+        // Legacy multi-sheet files (older Pola C layout) — only when not the EPC standard.
         if ($sheetCount > 1) {
             return new PolaCImport();
         }
