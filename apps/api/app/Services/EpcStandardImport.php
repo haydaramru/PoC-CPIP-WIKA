@@ -274,9 +274,25 @@ class EpcStandardImport
             }
 
             $level = substr_count($nomor, '.');
-            $bobot = (float) ($this->numeric($row[$cols['bobot']] ?? null) ?? 0);
+            $bobot = (float) ($this->percent($row[$cols['bobot']] ?? null) ?? 0);
 
             $subCategory = $this->stringOrNull($row[$cols['sub_kategori']] ?? null);
+
+            $progressPlanPct   = $this->percent($row[$cols['progress_plan']] ?? null);
+            $progressActualPct = $this->percent($row[$cols['progress_actual']] ?? null);
+
+            // EVM: Nilai Budget = Volume Budget × Harga Satuan (excludes addendum per spec)
+            $nilaiBudget  = ($vol ?? 0) * ($harsat ?? 0);
+            $nilaiAktual  = ($volAct ?? 0) * ($harsatAct ?? 0);
+            $plannedValue = $nilaiBudget * (($progressPlanPct ?? 0) / 100);
+            $earnedValue  = $nilaiBudget * (($progressActualPct ?? 0) / 100);
+            $actualCost   = $nilaiAktual;
+
+            $kontrakVendor = $this->numeric($row[$cols['kontrak_vendor']] ?? null);
+            $terminPaid    = $this->numeric($row[$cols['termin']] ?? null);
+            // Retensi 5% from contract value, Sisa Hutang = kontrak × 0.95 − termin dibayar
+            $retention   = $kontrakVendor !== null ? $kontrakVendor * 0.05 : null;
+            $outstanding = $kontrakVendor !== null ? $kontrakVendor * 0.95 - ($terminPaid ?? 0) : null;
 
             ProjectWorkItem::create([
                 'period_id'             => $phaseId,
@@ -296,13 +312,17 @@ class EpcStandardImport
                 'cost_category'         => $this->stringOrNull($row[$cols['kategori']] ?? null),
                 'cost_subcategory'      => $subCategory,
                 'bobot_pct'             => $bobot,
-                'progress_plan_pct'     => $this->numeric($row[$cols['progress_plan']] ?? null),
-                'progress_actual_pct'   => $this->numeric($row[$cols['progress_actual']] ?? null),
+                'progress_plan_pct'     => $progressPlanPct,
+                'progress_actual_pct'   => $progressActualPct,
+                'planned_value'         => $plannedValue,
+                'earned_value'          => $earnedValue,
+                'actual_cost_item'      => $actualCost,
                 'vendor_name'           => $this->stringOrNull($row[$cols['vendor']] ?? null),
                 'po_number'             => $this->stringOrNull($row[$cols['po']] ?? null),
-                'vendor_contract_value' => $this->numeric($row[$cols['kontrak_vendor']] ?? null),
-                'termin_paid'           => $this->numeric($row[$cols['termin']] ?? null),
-                'retention'             => $this->numeric($row[$cols['retensi']] ?? null),
+                'vendor_contract_value' => $kontrakVendor,
+                'termin_paid'           => $terminPaid,
+                'retention'             => $retention,
+                'outstanding_debt'      => $outstanding,
                 'total_budget'          => $totalBudget,
                 'realisasi'             => $realisasi,
                 'deviasi'               => $deviasi,

@@ -12,7 +12,7 @@ class DivisionResolver
     ];
 
     private const BUILDING_PREFIXES = [
-        'GDG', 'RSU', 'RST', 'APT', 'MAL', 'HTL', 'KMP', 'OFC',
+        'GDG', 'RSU', 'RST', 'APT', 'MAL', 'HTL', 'KMP', 'OFC', 'RES',
     ];
 
     public static function fromCode(?string $projectCode): ?string
