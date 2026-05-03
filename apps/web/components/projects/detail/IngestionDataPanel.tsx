@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { periodApi, projectApi } from "@/lib/api";
 import type {
   EquipmentLogListResponse,
-  MaterialLogListResponse,
+  ResourceLogListResponse,
   ProjectEquipmentLog,
-  ProjectMaterialLog,
+  ProjectResourceLog,
   ProjectPeriod,
   ProjectProgressCurve,
   ProjectWorkItem,
@@ -125,10 +125,10 @@ export default function IngestionDataPanel({ projectId }: Props) {
   const [activePeriodId, setActivePeriodId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [workItems, setWorkItems] = useState<ProjectWorkItem[]>([]);
-  const [materials, setMaterials] = useState<ProjectMaterialLog[]>([]);
+  const [materials, setMaterials] = useState<ProjectResourceLog[]>([]);
   const [equipment, setEquipment] = useState<ProjectEquipmentLog[]>([]);
   const [progressCurves, setProgressCurves] = useState<ProjectProgressCurve[]>([]);
-  const [materialMeta, setMaterialMeta] = useState<MaterialLogListResponse["meta"] | null>(null);
+  const [materialMeta, setMaterialMeta] = useState<ResourceLogListResponse["meta"] | null>(null);
   const [equipmentMeta, setEquipmentMeta] = useState<EquipmentLogListResponse["meta"] | null>(null);
   const [loadingPeriods, setLoadingPeriods] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(true);
@@ -187,7 +187,7 @@ export default function IngestionDataPanel({ projectId }: Props) {
 
     Promise.all([
       periodApi.workItems(activePeriodId),
-      periodApi.materials(activePeriodId),
+      periodApi.resources(activePeriodId),
       periodApi.equipment(activePeriodId),
     ])
       .then(([workRes, materialRes, equipmentRes]) => {
@@ -196,7 +196,7 @@ export default function IngestionDataPanel({ projectId }: Props) {
         }
 
         setWorkItems(workRes.data as unknown as ProjectWorkItem[]);
-        setMaterials(materialRes.data as unknown as ProjectMaterialLog[]);
+        setMaterials(materialRes.data as unknown as ProjectResourceLog[]);
         setEquipment(equipmentRes.data as unknown as ProjectEquipmentLog[]);
         setMaterialMeta(materialRes.meta as any);
         setEquipmentMeta(equipmentRes.meta as any);
@@ -484,7 +484,7 @@ export default function IngestionDataPanel({ projectId }: Props) {
                         <tr key={item.id}>
                           <td className="px-4 py-3 text-gray-700">{item.supplier_name ?? "—"}</td>
                           <td className="px-4 py-3 text-gray-800">
-                            <div className="font-medium">{item.material_type ?? "—"}</div>
+                            <div className="font-medium">{item.resource_type ?? "—"}</div>
                             {item.is_discount && (
                               <span className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
                                 Discount
