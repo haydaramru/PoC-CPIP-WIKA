@@ -124,7 +124,27 @@ export default function ProfitLossPage() {
                 </button>
               </td>
             </tr>
-            <tr
+            {[
+              { label: "Material", val: material },
+              { label: "Upah", val: upah },
+              { label: "Alat", val: alat },
+              { label: "Subkon", val: subkon },
+            ].map((item) => (
+              <tr
+                key={item.label}
+                className="group hover:bg-blue-50/50 transition-all duration-200 cursor-pointer"
+                onClick={() => router.push(`/data-management/resource?resource_category=${item.label}`)}
+              >
+                <td className="px-6 py-3" />
+                <td className="px-4 py-3 text-[14px] font-medium text-gray-700 group-hover:text-primary-blue flex items-center gap-2">
+                  {item.label}
+                  <ArrowSquareOutIcon size={14} className="opacity-0 group-hover:opacity-100 text-primary-blue transition-all" />
+                </td>
+                <td className="px-4 py-3 text-[14px] text-gray-700">{formatCurrency(item.val)}</td>
+                <td className="px-4 py-3 text-[12px] text-primary-blue font-medium opacity-0 group-hover:opacity-100 text-right">View Resource</td>
+              </tr>
+            ))}
+            {/* <tr
               className="hover:bg-gray-50/50 transition-colors cursor-pointer"
               onClick={() => router.push(`/data-management/resource?resource_category=Material`)}
             >
@@ -159,7 +179,7 @@ export default function ProfitLossPage() {
               <td className="px-4 py-3 text-[14px] font-medium text-gray-700">Subkon</td>
               <td className="px-4 py-3 text-[14px] text-gray-700">{formatCurrency(subkon)}</td>
               <td className="px-4 py-3" />
-            </tr>
+            </tr> */}
 
             {/* ── III. BIAYA TAK LANGSUNG ── */}
             <tr className="bg-[#F3F6FD]">
