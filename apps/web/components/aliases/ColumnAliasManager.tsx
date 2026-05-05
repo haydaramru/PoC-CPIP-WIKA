@@ -8,7 +8,7 @@ import { Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 const CONTEXT_OPTIONS: Array<{ value: AliasContext; label: string }> = [
   { value: "project", label: "Project" },
   { value: "work_item", label: "Work Item" },
-  { value: "material", label: "Material" },
+  { value: "resource", label: "Resource" },
   { value: "equipment", label: "Equipment" },
   { value: "period", label: "Period" },
   { value: "s_curve", label: "S-Curve" },
@@ -36,33 +36,9 @@ const TARGET_FIELD_OPTIONS: Record<AliasContext, string[]> = {
     "progress_total_pct",
     "period",
   ],
-  work_item: [
-    "item_no",
-    "item_name",
-    "budget_awal",
-    "addendum",
-    "total_budget",
-    "realisasi",
-    "deviasi",
-    "deviasi_pct",
-  ],
-  material: [
-    "supplier_name",
-    "material_type",
-    "qty",
-    "satuan",
-    "harga_satuan",
-    "total_tagihan",
-    "is_discount",
-  ],
-  equipment: [
-    "vendor_name",
-    "equipment_name",
-    "jam_kerja",
-    "rate_per_jam",
-    "total_biaya",
-    "payment_status",
-  ],
+  work_item: ["item_no", "item_name", "budget_awal", "addendum", "total_budget", "realisasi", "deviasi", "deviasi_pct"],
+  resource: ["supplier_name", "resource_type", "qty", "satuan", "harga_satuan", "total_tagihan", "is_discount"],
+  equipment: ["vendor_name", "equipment_name", "jam_kerja", "rate_per_jam", "total_biaya", "payment_status"],
   period: [
     "period",
     "client_name",
@@ -78,13 +54,7 @@ const TARGET_FIELD_OPTIONS: Record<AliasContext, string[]> = {
     "realized_costs",
     "hpp_deviation",
   ],
-  s_curve: [
-    "week_number",
-    "rencana_pct",
-    "realisasi_pct",
-    "deviasi_pct",
-    "keterangan",
-  ],
+  s_curve: ["week_number", "rencana_pct", "realisasi_pct", "deviasi_pct", "keterangan"],
 };
 
 type FormState = {
@@ -115,14 +85,16 @@ function extractApiError(error: unknown): string {
     typeof (error as { response?: unknown }).response === "object" &&
     (error as { response?: { data?: unknown } }).response !== null
   ) {
-    const response = (error as {
-      response?: {
-        data?: {
-          message?: string;
-          errors?: Record<string, string[] | undefined>;
+    const response = (
+      error as {
+        response?: {
+          data?: {
+            message?: string;
+            errors?: Record<string, string[] | undefined>;
+          };
         };
-      };
-    }).response;
+      }
+    ).response;
 
     const aliasMessage = response?.data?.errors?.alias?.[0];
     const targetFieldMessage = response?.data?.errors?.target_field?.[0];
@@ -276,27 +248,17 @@ export default function ColumnAliasManager() {
         <section className="card space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold text-dark-gray">
-                {editingId ? "Edit Alias" : "Tambah Alias"}
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Kelola mapping header Excel ke field standar ingestion.
-              </p>
+              <h2 className="text-lg font-bold text-dark-gray">{editingId ? "Edit Alias" : "Tambah Alias"}</h2>
+              <p className="mt-1 text-sm text-gray-500">Kelola mapping header Excel ke field standar ingestion.</p>
             </div>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="btn-outline"
-            >
+            <button type="button" onClick={resetForm} className="btn-outline">
               Reset
             </button>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-dark-gray">
-                Alias Header
-              </label>
+              <label className="mb-1 block text-sm font-semibold text-dark-gray">Alias Header</label>
               <input
                 value={form.alias}
                 onChange={(event) => setForm((prev) => ({ ...prev, alias: event.target.value }))}
@@ -310,9 +272,7 @@ export default function ColumnAliasManager() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-dark-gray">
-                Context
-              </label>
+              <label className="mb-1 block text-sm font-semibold text-dark-gray">Context</label>
               <select
                 value={form.context}
                 onChange={(event) =>
@@ -332,9 +292,7 @@ export default function ColumnAliasManager() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-dark-gray">
-                Target Field
-              </label>
+              <label className="mb-1 block text-sm font-semibold text-dark-gray">Target Field</label>
               <select
                 value={form.target_field}
                 onChange={(event) => setForm((prev) => ({ ...prev, target_field: event.target.value }))}
@@ -358,17 +316,9 @@ export default function ColumnAliasManager() {
               Aktif saat disimpan
             </label>
 
-            {error ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            ) : null}
+            {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
 
-            {success ? (
-              <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                {success}
-              </div>
-            ) : null}
+            {success ? <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">{success}</div> : null}
 
             <button type="submit" disabled={submitting} className="btn-primary inline-flex items-center gap-2 disabled:opacity-60">
               {editingId ? <Pencil size={16} /> : <Plus size={16} />}
@@ -381,9 +331,7 @@ export default function ColumnAliasManager() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-bold text-dark-gray">Daftar Alias</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Cari alias, filter per context, lalu edit atau nonaktifkan bila diperlukan.
-              </p>
+              <p className="mt-1 text-sm text-gray-500">Cari alias, filter per context, lalu edit atau nonaktifkan bila diperlukan.</p>
             </div>
 
             <button type="button" onClick={() => void loadAliases()} className="btn-outline inline-flex items-center gap-2">
@@ -437,20 +385,13 @@ export default function ColumnAliasManager() {
             </div>
 
             {loading ? (
-              <div className="px-4 py-10 text-center text-sm text-gray-500">
-                Memuat data alias...
-              </div>
+              <div className="px-4 py-10 text-center text-sm text-gray-500">Memuat data alias...</div>
             ) : aliases.length === 0 ? (
-              <div className="px-4 py-10 text-center text-sm text-gray-500">
-                Belum ada alias yang cocok dengan filter saat ini.
-              </div>
+              <div className="px-4 py-10 text-center text-sm text-gray-500">Belum ada alias yang cocok dengan filter saat ini.</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {aliases.map((alias) => (
-                  <div
-                    key={alias.id}
-                    className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr_132px] gap-3 px-4 py-3 text-sm text-dark-gray"
-                  >
+                  <div key={alias.id} className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr_132px] gap-3 px-4 py-3 text-sm text-dark-gray">
                     <div>
                       <p className="font-semibold text-dark-gray">{alias.alias}</p>
                       <p className="mt-1 text-xs text-gray-500">ID #{alias.id}</p>
@@ -460,9 +401,7 @@ export default function ColumnAliasManager() {
                     <div>
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          alias.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
+                          alias.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
                         }`}
                       >
                         {alias.is_active ? "Active" : "Inactive"}
