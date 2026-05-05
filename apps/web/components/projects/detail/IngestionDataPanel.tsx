@@ -16,7 +16,7 @@ type Props = {
   projectId: number;
 };
 
-type TabKey = "overview" | "work_items" | "materials" | "equipment" | "curve";
+type TabKey = "overview" | "work_items" | "resources" | "equipment" | "curve";
 
 type FlattenedWorkItem = ProjectWorkItem & {
   depth: number;
@@ -25,7 +25,7 @@ type FlattenedWorkItem = ProjectWorkItem & {
 const TAB_ITEMS: Array<{ key: TabKey; label: string }> = [
   { key: "overview", label: "Overview" },
   { key: "work_items", label: "Work Items" },
-  { key: "materials", label: "Materials" },
+  { key: "resources", label: "Resources" },
   { key: "equipment", label: "Equipment" },
   { key: "curve", label: "Progress Curve" },
 ];
@@ -94,26 +94,13 @@ function formatDate(value: string | null | undefined): string {
 }
 
 function flattenWorkItems(items: ProjectWorkItem[], depth = 0): FlattenedWorkItem[] {
-  return items.flatMap((item) => [
-    { ...item, depth },
-    ...flattenWorkItems(item.children ?? [], depth + 1),
-  ]);
+  return items.flatMap((item) => [{ ...item, depth }, ...flattenWorkItems(item.children ?? [], depth + 1)]);
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
+function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-        {label}
-      </p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</p>
       <p className="mt-2 text-lg font-bold text-gray-900">{value}</p>
       {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
@@ -125,10 +112,10 @@ export default function IngestionDataPanel({ projectId }: Props) {
   const [activePeriodId, setActivePeriodId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [workItems, setWorkItems] = useState<ProjectWorkItem[]>([]);
-  const [materials, setMaterials] = useState<ProjectResourceLog[]>([]);
+  const [resources, setResources] = useState<ProjectResourceLog[]>([]);
   const [equipment, setEquipment] = useState<ProjectEquipmentLog[]>([]);
   const [progressCurves, setProgressCurves] = useState<ProjectProgressCurve[]>([]);
-  const [materialMeta, setMaterialMeta] = useState<ResourceLogListResponse["meta"] | null>(null);
+  const [resourceMeta, setResourceMeta] = useState<ResourceLogListResponse["meta"] | null>(null);
   const [equipmentMeta, setEquipmentMeta] = useState<EquipmentLogListResponse["meta"] | null>(null);
   const [loadingPeriods, setLoadingPeriods] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(true);
@@ -137,10 +124,7 @@ export default function IngestionDataPanel({ projectId }: Props) {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([
-      projectApi.periods(projectId),
-      projectApi.progressCurve(projectId),
-    ])
+    Promise.all([projectApi.periods(projectId), projectApi.progressCurve(projectId)])
       .then(([periodRes, curveRes]) => {
         if (cancelled) {
           return;
@@ -185,20 +169,16 @@ export default function IngestionDataPanel({ projectId }: Props) {
 
     let cancelled = false;
 
-    Promise.all([
-      periodApi.workItems(activePeriodId),
-      periodApi.resources(activePeriodId),
-      periodApi.equipment(activePeriodId),
-    ])
-      .then(([workRes, materialRes, equipmentRes]) => {
+    Promise.all([periodApi.workItems(activePeriodId), periodApi.resources(activePeriodId), periodApi.equipment(activePeriodId)])
+      .then(([workRes, resourceRes, equipmentRes]) => {
         if (cancelled) {
           return;
         }
 
         setWorkItems(workRes.data as unknown as ProjectWorkItem[]);
-        setMaterials(materialRes.data as unknown as ProjectResourceLog[]);
+        setResources(resourceRes.data as unknown as ProjectResourceLog[]);
         setEquipment(equipmentRes.data as unknown as ProjectEquipmentLog[]);
-        setMaterialMeta(materialRes.meta as any);
+        setResourceMeta(resourceRes.meta as any);
         setEquipmentMeta(equipmentRes.meta as any);
         setError("");
       })
@@ -219,28 +199,17 @@ export default function IngestionDataPanel({ projectId }: Props) {
   }, [activePeriodId]);
 
   const activePeriod = periods.find((period) => period.id === activePeriodId) ?? null;
-  const flattenedWorkItems = useMemo(
-    () => flattenWorkItems(workItems),
-    [workItems],
-  );
+  const flattenedWorkItems = useMemo(() => flattenWorkItems(workItems), [workItems]);
 
-  const totalWorkBudget = flattenedWorkItems.reduce(
-    (sum, item) => sum + Number(item.total_budget ?? 0),
-    0,
-  );
-  const totalWorkActual = flattenedWorkItems.reduce(
-    (sum, item) => sum + Number(item.realisasi ?? 0),
-    0,
-  );
+  const totalWorkBudget = flattenedWorkItems.reduce((sum, item) => sum + Number(item.total_budget ?? 0), 0);
+  const totalWorkActual = flattenedWorkItems.reduce((sum, item) => sum + Number(item.realisasi ?? 0), 0);
 
   return (
     <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-4 border-b border-gray-100 pb-5 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Ingested Data</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Data berikut berasal dari hasil ingestion yang sudah tersimpan di database.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Data berikut berasal dari hasil ingestion yang sudah tersimpan di database.</p>
         </div>
 
         {periods.length > 0 && (
@@ -271,13 +240,9 @@ export default function IngestionDataPanel({ projectId }: Props) {
       </div>
 
       {loadingPeriods ? (
-        <div className="py-12 text-center text-sm text-gray-400">
-          Memuat data ingestion...
-        </div>
+        <div className="py-12 text-center text-sm text-gray-400">Memuat data ingestion...</div>
       ) : error ? (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       ) : periods.length === 0 ? (
         <div className="mt-5 rounded-xl border border-dashed border-gray-200 px-4 py-10 text-center text-sm text-gray-400">
           Belum ada period atau rincian ingestion yang tersimpan untuk project ini.
@@ -285,11 +250,7 @@ export default function IngestionDataPanel({ projectId }: Props) {
       ) : (
         <div className="space-y-5 pt-5">
           <div className="grid gap-4 md:grid-cols-3">
-            <StatCard
-              label="Period"
-              value={activePeriod?.period ?? "—"}
-              hint={activePeriod?.report_source ?? "Sumber laporan tidak tersedia"}
-            />
+            <StatCard label="Period" value={activePeriod?.period ?? "—"} hint={activePeriod?.report_source ?? "Sumber laporan tidak tersedia"} />
             <StatCard
               label="Project Manager"
               value={activePeriod?.project_manager ?? "—"}
@@ -312,9 +273,7 @@ export default function IngestionDataPanel({ projectId }: Props) {
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                    active
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+                    active ? "bg-blue-50 text-blue-700" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
                   }`}
                 >
                   {tab.label}
@@ -323,50 +282,25 @@ export default function IngestionDataPanel({ projectId }: Props) {
             })}
           </div>
 
-          {loadingDetails && activeTab !== "curve" ? (
-            <div className="py-10 text-center text-sm text-gray-400">
-              Memuat rincian period...
-            </div>
-          ) : null}
+          {loadingDetails && activeTab !== "curve" ? <div className="py-10 text-center text-sm text-gray-400">Memuat rincian period...</div> : null}
 
           {activeTab === "overview" && activePeriod && (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <StatCard
-                  label="Nilai Kontrak"
-                  value={formatCurrency(activePeriod.contract_value)}
-                />
-                <StatCard
-                  label="Addendum"
-                  value={formatCurrency(activePeriod.addendum_value)}
-                />
-                <StatCard
-                  label="BQ External"
-                  value={formatCurrency(activePeriod.bq_external)}
-                />
-                <StatCard
-                  label="Deviasi HPP"
-                  value={formatCurrency(activePeriod.hpp_deviation)}
-                />
+                <StatCard label="Nilai Kontrak" value={formatCurrency(activePeriod.contract_value)} />
+                <StatCard label="Addendum" value={formatCurrency(activePeriod.addendum_value)} />
+                <StatCard label="BQ External" value={formatCurrency(activePeriod.bq_external)} />
+                <StatCard label="Deviasi HPP" value={formatCurrency(activePeriod.hpp_deviation)} />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <StatCard
-                  label="Progress Sebelumnya"
-                  value={formatPercent(activePeriod.progress_prev_pct)}
-                />
-                <StatCard
-                  label="Progress Period Ini"
-                  value={formatPercent(activePeriod.progress_this_pct)}
-                />
-                <StatCard
-                  label="Progress Total"
-                  value={formatPercent(activePeriod.progress_total_pct)}
-                />
+                <StatCard label="Progress Sebelumnya" value={formatPercent(activePeriod.progress_prev_pct)} />
+                <StatCard label="Progress Period Ini" value={formatPercent(activePeriod.progress_this_pct)} />
+                <StatCard label="Progress Total" value={formatPercent(activePeriod.progress_total_pct)} />
                 <StatCard
                   label="Rows Tersimpan"
-                  value={`${flattenedWorkItems.length + materials.length + equipment.length + progressCurves.length}`}
-                  hint="Akumulasi work item, material, equipment, dan progress"
+                  value={`${flattenedWorkItems.length + resources.length + equipment.length + progressCurves.length}`}
+                  hint="Akumulasi work item, resource, equipment, dan progress"
                 />
               </div>
 
@@ -377,9 +311,9 @@ export default function IngestionDataPanel({ projectId }: Props) {
                   hint={`Budget ${formatCurrency(totalWorkBudget)} | Realisasi ${formatCurrency(totalWorkActual)}`}
                 />
                 <StatCard
-                  label="Total Material"
-                  value={String(materials.length)}
-                  hint={`Tagihan ${formatCurrency(materialMeta?.total_tagihan ?? 0)}`}
+                  label="Total Resource"
+                  value={String(resources.length)}
+                  hint={`Tagihan ${formatCurrency(resourceMeta?.total_tagihan ?? 0)}`}
                 />
                 <StatCard
                   label="Total Equipment"
@@ -423,18 +357,10 @@ export default function IngestionDataPanel({ projectId }: Props) {
                             {item.item_name}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatCurrency(item.total_budget)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatCurrency(item.realisasi)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatCurrency(item.deviasi)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatPercent(item.deviasi_pct)}
-                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.total_budget)}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.realisasi)}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.deviasi)}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{formatPercent(item.deviasi_pct)}</td>
                       </tr>
                     ))
                   )}
@@ -443,21 +369,12 @@ export default function IngestionDataPanel({ projectId }: Props) {
             </div>
           )}
 
-          {activeTab === "materials" && (
+          {activeTab === "resources" && (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
-                <StatCard
-                  label="Total Rows"
-                  value={String(materialMeta?.total_rows ?? materials.length)}
-                />
-                <StatCard
-                  label="Total Tagihan"
-                  value={formatCurrency(materialMeta?.total_tagihan ?? 0)}
-                />
-                <StatCard
-                  label="Discount Rows"
-                  value={String(materialMeta?.discount_rows ?? 0)}
-                />
+                <StatCard label="Total Rows" value={String(resourceMeta?.total_rows ?? resources.length)} />
+                <StatCard label="Total Tagihan" value={formatCurrency(resourceMeta?.total_tagihan ?? 0)} />
+                <StatCard label="Discount Rows" value={String(resourceMeta?.discount_rows ?? 0)} />
               </div>
 
               <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -465,7 +382,7 @@ export default function IngestionDataPanel({ projectId }: Props) {
                   <thead className="bg-gray-50">
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-400">
                       <th className="px-4 py-3">Supplier</th>
-                      <th className="px-4 py-3">Material</th>
+                      <th className="px-4 py-3">Resource</th>
                       <th className="px-4 py-3 text-right">Qty</th>
                       <th className="px-4 py-3">Satuan</th>
                       <th className="px-4 py-3 text-right">Harga Satuan</th>
@@ -473,14 +390,14 @@ export default function IngestionDataPanel({ projectId }: Props) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
-                    {materials.length === 0 ? (
+                    {resources.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">
-                          Belum ada material log yang tersimpan.
+                          Belum ada resource log yang tersimpan.
                         </td>
                       </tr>
                     ) : (
-                      materials.map((item) => (
+                      resources.map((item) => (
                         <tr key={item.id}>
                           <td className="px-4 py-3 text-gray-700">{item.supplier_name ?? "—"}</td>
                           <td className="px-4 py-3 text-gray-800">
@@ -491,16 +408,10 @@ export default function IngestionDataPanel({ projectId }: Props) {
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {formatNumber(item.qty, 4)}
-                          </td>
+                          <td className="px-4 py-3 text-right text-gray-600">{formatNumber(item.qty, 4)}</td>
                           <td className="px-4 py-3 text-gray-600">{item.satuan ?? "—"}</td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {formatCurrency(item.harga_satuan)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {formatCurrency(item.total_tagihan)}
-                          </td>
+                          <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.harga_satuan)}</td>
+                          <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.total_tagihan)}</td>
                         </tr>
                       ))
                     )}
@@ -513,18 +424,9 @@ export default function IngestionDataPanel({ projectId }: Props) {
           {activeTab === "equipment" && (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
-                <StatCard
-                  label="Total Rows"
-                  value={String(equipmentMeta?.total_rows ?? equipment.length)}
-                />
-                <StatCard
-                  label="Total Biaya"
-                  value={formatCurrency(equipmentMeta?.total_biaya ?? 0)}
-                />
-                <StatCard
-                  label="Pending Payment"
-                  value={String(equipmentMeta?.pending_count ?? 0)}
-                />
+                <StatCard label="Total Rows" value={String(equipmentMeta?.total_rows ?? equipment.length)} />
+                <StatCard label="Total Biaya" value={formatCurrency(equipmentMeta?.total_biaya ?? 0)} />
+                <StatCard label="Pending Payment" value={String(equipmentMeta?.pending_count ?? 0)} />
               </div>
 
               <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -550,21 +452,11 @@ export default function IngestionDataPanel({ projectId }: Props) {
                       equipment.map((item) => (
                         <tr key={item.id}>
                           <td className="px-4 py-3 text-gray-700">{item.vendor_name ?? "—"}</td>
-                          <td className="px-4 py-3 font-medium text-gray-800">
-                            {item.equipment_name ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {formatNumber(item.jam_kerja, 2)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {formatCurrency(item.rate_per_jam)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
-                            {formatCurrency(item.total_biaya)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">
-                            {item.payment_status ?? "—"}
-                          </td>
+                          <td className="px-4 py-3 font-medium text-gray-800">{item.equipment_name ?? "—"}</td>
+                          <td className="px-4 py-3 text-right text-gray-600">{formatNumber(item.jam_kerja, 2)}</td>
+                          <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.rate_per_jam)}</td>
+                          <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.total_biaya)}</td>
+                          <td className="px-4 py-3 text-gray-600">{item.payment_status ?? "—"}</td>
                         </tr>
                       ))
                     )}
@@ -597,24 +489,12 @@ export default function IngestionDataPanel({ projectId }: Props) {
                   ) : (
                     progressCurves.map((curve) => (
                       <tr key={curve.id}>
-                        <td className="px-4 py-3 text-gray-700">
-                          {curve.week_number ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {formatDate(curve.week_date)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatPercent(curve.rencana_pct)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatPercent(curve.realisasi_pct)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatPercent(curve.deviasi_pct)}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {curve.keterangan ?? "—"}
-                        </td>
+                        <td className="px-4 py-3 text-gray-700">{curve.week_number ?? "—"}</td>
+                        <td className="px-4 py-3 text-gray-600">{formatDate(curve.week_date)}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{formatPercent(curve.rencana_pct)}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{formatPercent(curve.realisasi_pct)}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{formatPercent(curve.deviasi_pct)}</td>
+                        <td className="px-4 py-3 text-gray-600">{curve.keterangan ?? "—"}</td>
                       </tr>
                     ))
                   )}
