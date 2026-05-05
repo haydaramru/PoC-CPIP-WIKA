@@ -1,7 +1,7 @@
 export type ProjectStatus = "good" | "warning" | "critical" | "unknown";
 export type Division = "Infrastructure" | "Building";
 export type IngestionStatus = "pending" | "processing" | "success" | "failed" | "partial";
-export type AliasContext = "project" | "work_item" | "material" | "equipment" | "period" | "s_curve";
+export type AliasContext = "project" | "work_item" | "resource" | "equipment" | "period" | "s_curve";
 
 export interface Project {
   id: number;
